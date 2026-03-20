@@ -2,26 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --font-inter: 'Inter', sans-serif;
+    --font-manrope: 'Manrope', sans-serif;
+  }
+
+  * {
+    @apply border-outline-variant;
+  }
+
+  body {
+    @apply bg-surface text-on-surface font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* Custom Scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e1e2e4;
+    border-radius: 10px;
+  }
+
+  /* Glass Nav */
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Glass Effect */
+  .glass-effect {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Pulse red animation for LIVE badge */
+  .pulse-red {
+    box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.7);
+    animation: pulse-red-anim 2s infinite;
+  }
+
+  @keyframes pulse-red-anim {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.7);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 10px rgba(186, 26, 26, 0);
+    }
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(186, 26, 26, 0);
+    }
+  }
+
+  /* Math notation */
+  .math-notion {
+    font-style: italic;
+    font-family: 'Times New Roman', Times, serif;
+  }
+
+  /* Step line for onboarding */
+  .step-line {
+    height: 2px;
+    width: 40px;
+    background-color: #e1e2e4;
+    margin: 0 12px;
+  }
+
+  .step-line-active {
+    background-color: #cf6e3a;
   }
 }

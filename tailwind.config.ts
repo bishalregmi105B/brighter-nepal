@@ -1,19 +1,130 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: ['class'],
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        // Brand colors extracted exactly from Stitch HTML files
+        brand: {
+          navy:    '#1a1a4e',
+          teal:    '#2d6a6a',
+          orange:  '#c0622f',
+          'navy-light':  '#141448',
+          'teal-light':  '#074f4f',
+        },
+        // Material Design 3 token system (exact hex from Stitch)
+        'inverse-on-surface':        '#f0f1f3',
+        'on-secondary':              '#ffffff',
+        'surface-container-lowest':  '#ffffff',
+        'secondary-container':       '#c1c1ff',
+        'primary-fixed':             '#ffdbcc',
+        'on-primary-fixed':          '#351000',
+        'surface-bright':            '#f8f9fb',
+        'outline-variant':           '#c8c5d0',
+        'tertiary-container':        '#002626',
+        'primary':                   '#180500',
+        'inverse-surface':           '#2e3132',
+        'surface-variant':           '#e1e2e4',
+        'inverse-primary':           '#ffb693',
+        'on-tertiary':               '#ffffff',
+        'on-background':             '#191c1e',
+        'surface-container':         '#edeef0',
+        'on-tertiary-container':     '#579292',
+        'surface-container-low':     '#f2f4f6',
+        'secondary-fixed':           '#e1dfff',
+        'tertiary':                  '#000d0d',
+        'background':                '#f8f9fb',
+        'on-secondary-fixed-variant':'#414176',
+        'surface-tint':              '#9a4514',
+        'surface':                   '#f8f9fb',
+        'on-secondary-container':    '#4c4d83',
+        'surface-container-highest': '#e1e2e4',
+        'on-primary-fixed-variant':  '#7a3000',
+        'on-secondary-fixed':        '#141448',
+        'on-error':                  '#ffffff',
+        'tertiary-fixed':            '#b1eeed',
+        'on-tertiary-fixed-variant': '#074f4f',
+        'on-surface-variant':        '#47464f',
+        'outline':                   '#777680',
+        'primary-container':         '#3d1400',
+        'surface-dim':               '#d9dadc',
+        'error':                     '#ba1a1a',
+        'on-primary':                '#ffffff',
+        'error-container':           '#ffdad6',
+        'primary-fixed-dim':         '#ffb693',
+        'on-surface':                '#191c1e',
+        'secondary':                 '#585990',
+        'on-primary-container':      '#cf6e3a',
+        'on-error-container':        '#93000a',
+        'tertiary-fixed-dim':        '#95d1d1',
+        'surface-container-high':    '#e7e8ea',
+        'secondary-fixed-dim':       '#c1c1ff',
+        'on-tertiary-fixed':         '#002020',
+        // Exam question bubble states
+        exam: {
+          answered: '#cf6e3a',
+          marked:   '#f59e0b',
+          visited:  '#ba1a1a',
+          correct:  '#22c55e',
+          wrong:    '#ba1a1a',
+        },
+        // Badge colors
+        badge: {
+          trial:     '#f59e0b',
+          paid:      '#22c55e',
+          inactive:  '#9ca3af',
+          urgent:    '#ba1a1a',
+          important: '#f59e0b',
+          general:   '#6b7280',
+        },
+      },
+      fontFamily: {
+        headline: ['var(--font-manrope)', 'Manrope', 'sans-serif'],
+        body:     ['var(--font-inter)', 'Inter', 'sans-serif'],
+        label:    ['var(--font-inter)', 'Inter', 'sans-serif'],
+        sans:     ['var(--font-inter)', 'Inter', 'sans-serif'],
+      },
+      borderRadius: {
+        DEFAULT: '0.25rem',
+        lg:      '0.5rem',
+        xl:      '0.75rem',
+        '2xl':   '1rem',
+        '3xl':   '1.5rem',
+        full:    '9999px',
+      },
+      boxShadow: {
+        'card':   '0 12px 32px rgba(25, 28, 30, 0.06)',
+        'card-lg':'0 20px 48px rgba(25, 28, 30, 0.08)',
+        'nav':    '0 12px 32px rgba(25, 28, 30, 0.06)',
+      },
+      keyframes: {
+        'pulse-red': {
+          '0%, 100%': { transform: 'scale(0.95)', boxShadow: '0 0 0 0 rgba(186, 26, 26, 0.7)' },
+          '70%':      { transform: 'scale(1)', boxShadow: '0 0 0 10px rgba(186, 26, 26, 0)' },
+        },
+        'fade-in': {
+          '0%':   { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'slide-in': {
+          '0%':   { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+      },
+      animation: {
+        'pulse-red': 'pulse-red 2s infinite',
+        'fade-in':   'fade-in 0.3s ease-out',
+        'slide-in':  'slide-in 0.3s ease-out',
       },
     },
   },
   plugins: [],
-};
-export default config;
+}
+
+export default config
