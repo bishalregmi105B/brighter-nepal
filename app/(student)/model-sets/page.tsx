@@ -7,9 +7,7 @@ import { modelSetService, type ModelSet } from '@/services/modelSetService'
 import { cn } from '@/lib/utils/cn'
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard'
-const FILTER_TABS  = ['All Sets', 'IOE Focus', 'IOM Focus', 'CSIT']
 const SORT_OPTIONS = ['Newest First', 'Difficulty (Low → High)']
-const TAB_TAG: Record<string, string> = { 'IOE Focus': 'IOE', 'IOM Focus': 'IOM', 'CSIT': 'CSIT' }
 const DIFF_ORDER: Record<string, number> = { Easy: 0, Medium: 1, Hard: 2 }
 
 function DifficultyPill({ difficulty, featured }: { difficulty: string; featured?: boolean }) {
@@ -23,14 +21,18 @@ function DifficultyPill({ difficulty, featured }: { difficulty: string; featured
 
 export default function ModelSetsPage() {
   const [sets,      setSets]     = useState<ModelSet[]>([])
+  const [targets,   setTargets]  = useState<string[]>([])
   const [loading,   setLoading]  = useState(true)
   const [error,     setError]    = useState('')
   const [activeTab, setActiveTab] = useState('All Sets')
   const [sortBy,    setSortBy]   = useState('Newest First')
 
   useEffect(() => {
-    const tab = TAB_TAG[activeTab]?.toLowerCase() ?? 'all'
-    modelSetService.getModelSets(tab).then((res) => {
+    Promise.all([
+      modelSetService.getTargets().catch(() => ({ data: [] })),
+      modelSetService.getModelSets(activeTab === 'All Sets' ? 'all' : activeTab.toLowerCase())
+    ]).then(([targetsRes, res]) => {
+      setTargets(targetsRes.data as string[])
       const d = res.data
       setSets(Array.isArray(d) ? d : (d as { items?: ModelSet[] }).items ?? [])
     }).catch((e) => setError(e.message)).finally(() => setLoading(false))
@@ -53,7 +55,7 @@ export default function ModelSetsPage() {
           <div>
             <span className="text-on-primary-container font-bold text-sm tracking-widest uppercase mb-2 block">BridgeCourse Nepal</span>
             <h3 className="font-headline text-4xl md:text-5xl font-extrabold text-[#1a1a4e] leading-tight">
-              IOE · IOM · CSIT <br />Mock Sets
+              Mock Tests <br />& Model Sets
             </h3>
           </div>
           <div className="bg-white p-4 rounded-xl border border-outline-variant/10 shadow-sm flex items-center gap-4">
@@ -70,13 +72,13 @@ export default function ModelSetsPage() {
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div className="flex bg-surface-container-low p-1 rounded-lg">
-          {FILTER_TABS.map((tab) => (
+        <div className="flex flex-wrap gap-2 bg-surface-container-low p-1 rounded-lg">
+          {['All Sets', ...targets].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={cn(
               'px-6 py-2 font-bold text-sm rounded-md transition-colors',
               activeTab === tab ? 'bg-white text-[#c0622f] shadow-sm' : 'text-slate-500 hover:text-on-surface'
             )}>
-              {tab}
+              {tab === 'All Sets' ? tab : `${tab} Focus`}
             </button>
           ))}
         </div>
@@ -116,7 +118,7 @@ export default function ModelSetsPage() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <p className={cn('font-headline text-2xl font-black', isFeatured ? 'text-white' : 'text-[#1a1a4e]')}>
-                      {set.title.replace(/^(IOE|IOM|CEE|CSIT|Pulchowk|Thapathali|BridgeCourse)\s*/i, '').slice(0, 22)}
+                      {set.title.replace(/^(IOE|IOM|CEE|CSIT|Pulchowk|Thapathali|BridgeCourse|St\. Xavier's|SOS)\s*/i, '').slice(0, 22)}
                     </p>
                   </div>
                   <p className={cn('text-xs font-medium', isFeatured ? 'text-slate-300' : 'text-slate-500')}>

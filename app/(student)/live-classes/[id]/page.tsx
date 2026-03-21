@@ -1,36 +1,32 @@
 'use client'
-// Student Live Class Room — fetches real class data and group messages for chat
+// Student Live Class Room — real-time chat via SocketIO
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Users, Hand, MessageSquare, Maximize2, Play, Pause, Volume2, Settings, Send, Loader2, ArrowLeft } from 'lucide-react'
+import { Users, MessageSquare, Send, Loader2, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
-import { groupService, type GroupMessage } from '@/services/groupService'
+import { useLiveChat }  from '@/hooks/useLiveChat'
+import { authService, type AuthUser }  from '@/services/authService'
 import { cn } from '@/lib/utils/cn'
 import { SecureVideoPlayer } from '@/components/media/SecureVideoPlayer'
 
 export default function LiveClassRoomPage() {
-  const params       = useParams<{ id: string }>()
-  const router       = useRouter()
-  const [cls,        setCls]       = useState<LiveClass | null>(null)
-  const [messages,   setMessages]  = useState<GroupMessage[]>([])
-  const [input,      setInput]     = useState('')
-  const [isPlaying,  setIsPlaying] = useState(true)
-  const [activeTab,  setActiveTab] = useState<'chat' | 'qa'>('chat')
-  const [sending,    setSending]   = useState(false)
-  const [loading,    setLoading]   = useState(true)
-  const messagesEnd  = useRef<HTMLDivElement>(null)
+  const params  = useParams<{ id: string }>()
+  const router  = useRouter()
+  const [cls,       setCls]       = useState<LiveClass | null>(null)
+  const [user,      setUser]      = useState<AuthUser | null>(null)
+  const [input,     setInput]     = useState('')
+  const [activeTab, setActiveTab] = useState<'chat' | 'qa'>('chat')
+  const [loading,   setLoading]   = useState(true)
+  const messagesEnd = useRef<HTMLDivElement>(null)
+
+  const classId = cls?.id ?? null
+  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected } = useLiveChat(classId)
 
   useEffect(() => {
     if (!params.id) return
+    authService.getMe().then(u => setUser(u)).catch(() => {})
     liveClassService.getClass(Number(params.id)).then((res) => {
-      const c = res.data
-      setCls(c)
-      // Load chat via the group linked to this class (group_id from class data)
-      if (c.group_id) {
-        groupService.getGroupMessages(c.group_id, 30).then((msgRes) => {
-          setMessages(msgRes.data?.items ?? [])
-        })
-      }
+      setCls(res.data)
     }).finally(() => setLoading(false))
   }, [params.id])
 
@@ -38,23 +34,23 @@ export default function LiveClassRoomPage() {
     messagesEnd.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = async () => {
-    if (!input.trim() || !cls?.group_id) return
-    setSending(true)
-    try {
-      await groupService.sendMessage(cls.group_id, input)
-      const res = await groupService.getGroupMessages(cls.group_id, 30)
-      setMessages(res.data?.items ?? [])
-      setInput('')
-    } catch {}
-    setSending(false)
+  const handleSend = () => {
+    if (!input.trim()) return
+    sendMessage(input)
+    setInput('')
+    setTyping(false)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value)
+    setTyping(e.target.value.length > 0)
   }
 
   if (loading) return <div className="flex items-center justify-center h-screen bg-[#f8f9fb]"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-[#f8f9fb] overflow-hidden">
-      {/* Video Side (left on desktop, top on mobile) */}
+      {/* Video Side */}
       <div className="flex flex-col w-full md:flex-1 min-w-0 overflow-y-auto custom-scrollbar">
         <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-white flex-shrink-0 z-20 sticky top-0 shadow-sm">
           <div className="flex items-center gap-4">
@@ -69,6 +65,12 @@ export default function LiveClassRoomPage() {
             </div>
           </div>
           <div className="flex items-center gap-3 text-slate-500">
+            {onlineCount > 0 && (
+              <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                {onlineCount} live
+              </span>
+            )}
             <Users className="w-4 h-4" />
             <span className="text-sm font-medium">{(cls?.watchers ?? 0).toLocaleString()} watching</span>
           </div>
@@ -82,12 +84,12 @@ export default function LiveClassRoomPage() {
           />
         </div>
 
-        {/* Class Details Area below Video */}
+        {/* Class Details */}
         <div className="p-6 md:p-8 text-[#1a1a4e] space-y-4 max-w-4xl">
           <div className="flex flex-wrap items-center gap-3">
-             <span className="bg-[#1a1a4e]/5 border border-[#1a1a4e]/10 text-[#1a1a4e] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{cls?.subject}</span>
-             <span className="text-slate-500 text-sm font-medium">{cls?.duration_min} minutes</span>
-             {cls?.scheduled_at && <span className="text-slate-500 text-sm font-medium">· {new Date(cls.scheduled_at).toLocaleDateString()}</span>}
+            <span className="bg-[#1a1a4e]/5 border border-[#1a1a4e]/10 text-[#1a1a4e] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{cls?.subject}</span>
+            <span className="text-slate-500 text-sm font-medium">{cls?.duration_min} minutes</span>
+            {cls?.scheduled_at && <span className="text-slate-500 text-sm font-medium">· {new Date(cls.scheduled_at).toLocaleDateString()}</span>}
           </div>
           <h1 className="text-2xl md:text-3xl font-headline font-bold">{cls?.title}</h1>
           <div className="flex items-center gap-3 pt-2">
@@ -111,40 +113,68 @@ export default function LiveClassRoomPage() {
               <MessageSquare className="w-4 h-4" /> {tab.label}
             </button>
           ))}
+          {/* Live / offline status */}
+          <div className="flex items-center px-3">
+            {connected
+              ? <Wifi className="w-3.5 h-3.5 text-green-500" title="Connected" />
+              : <WifiOff className="w-3.5 h-3.5 text-slate-400 animate-pulse" title="Reconnecting…" />}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <p className="text-center text-outline text-xs py-6">No messages yet. Be first to chat!</p>
-          ) : messages.map((msg) => (
-            <div key={msg.id} className="flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-5 h-5 rounded-full bg-[#1a1a4e] flex items-center justify-center text-[8px] font-black text-white">
-                  {(msg.sender_name ?? 'U')[0]}
+          ) : messages.map((msg) => {
+            const isMe = msg.user_id === user?.id
+            return (
+              <div key={msg.id} className={cn("flex flex-col", isMe && "items-end")}>
+                <div className={cn("flex items-center gap-2 mb-1", isMe && "flex-row-reverse")}>
+                  <div className="w-5 h-5 rounded-full bg-[#1a1a4e] flex items-center justify-center text-[8px] font-black text-white">
+                    {(msg.sender_name ?? 'U')[0]}
+                  </div>
+                  <span className="text-[11px] font-bold text-[#1a1a4e]">{isMe ? 'You' : msg.sender_name ?? 'User'}</span>
+                  <span className="text-[10px] text-slate-300 ml-auto">{new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
                 </div>
-                <span className="text-[11px] font-bold text-[#1a1a4e]">{msg.sender_name ?? 'User'}</span>
-                <span className="text-[10px] text-slate-300 ml-auto">{new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+                <div className={cn("px-3 py-2 rounded-xl text-xs leading-relaxed max-w-[85%]",
+                  isMe ? "bg-[#c0622f] text-white rounded-tr-none" : "bg-slate-100 text-slate-700 rounded-tl-none")}>
+                  {msg.text}
+                </div>
               </div>
-              <p className="text-xs text-slate-700 leading-relaxed pl-7">{msg.text}</p>
+            )
+          })}
+
+          {/* Typing indicator */}
+          {typingUsers.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 pl-1">
+              <span className="flex gap-0.5">
+                <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:300ms]" />
+              </span>
+              {typingUsers[0].name} is typing…
             </div>
-          ))}
+          )}
           <div ref={messagesEnd} />
         </div>
 
         <div className="p-3 border-t border-surface-container bg-surface-container-low flex-shrink-0">
-          {cls?.group_id ? (
-            <div className="flex items-center gap-2">
-              <input value={input} onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Type a message…" className="flex-1 text-xs bg-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-on-primary-container/20" />
-              <button onClick={sendMessage} disabled={!input.trim() || sending}
-                className="w-8 h-8 rounded-lg bg-on-primary-container text-white flex items-center justify-center hover:opacity-90 disabled:opacity-40">
-                {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-              </button>
-            </div>
-          ) : (
-            <p className="text-xs text-center text-outline font-medium">This is a read-only broadcast. Use Raise Hand to ask questions.</p>
-          )}
+          <div className="flex items-center gap-2">
+            <input
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              onBlur={() => setTyping(false)}
+              placeholder={connected ? 'Type a message…' : 'Reconnecting…'}
+              disabled={!connected}
+              className="flex-1 text-xs bg-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-on-primary-container/20 disabled:opacity-50"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || !connected}
+              className="w-8 h-8 rounded-lg bg-on-primary-container text-white flex items-center justify-center hover:opacity-90 disabled:opacity-40">
+              <Send className="w-3 h-3" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

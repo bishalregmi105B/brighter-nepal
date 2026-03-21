@@ -146,6 +146,23 @@ export function AdminSidebar() {
         </div>
       )}
 
+      {/* Developer Watermark */}
+      <div className={cn("mt-auto px-4 pb-4 transition-all duration-300", isCollapsed ? "md:hidden" : "block")}>
+        <a
+          href="http://ashlya.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "flex items-center gap-2 text-[10px] text-slate-400 hover:text-[#c0622f] transition-colors",
+            isCollapsed && "justify-center"
+          )}
+          title="Developed and maintained by Ashlya"
+        >
+          <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center flex-shrink-0 font-serif italic">i</div>
+          {!isCollapsed && <span>Developed by Ashlya</span>}
+        </a>
+      </div>
+
       {/* Toggle */}
       <button
         onClick={toggle}

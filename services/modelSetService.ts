@@ -12,16 +12,17 @@ export interface ModelSetAttempt {
 }
 
 export const modelSetService = {
-  /** Accepts string tab/sort OR an object with page/search/limit for admin pages */
-  getModelSets: (tabOrParams: string | { page?: number; search?: string; limit?: number; tab?: string; sort?: string } = 'all', sort = 'newest') => {
+  /** Accepts string tab/sort OR an object with page/search/limit/status for admin pages */
+  getModelSets: (tabOrParams: string | { page?: number; search?: string; limit?: number; tab?: string; sort?: string; status?: string } = 'all', sort = 'newest') => {
     if (typeof tabOrParams === 'string') {
       const tab = tabOrParams
       return api.get<{ data: ModelSet[] | { items: ModelSet[]; total: number } }>(`/api/model-sets?tab=${tab}&sort=${sort}`)
     }
-    const { page = 1, search = '', limit = 10, tab = 'all' } = tabOrParams
-    const q = new URLSearchParams({ page: String(page), search, limit: String(limit), tab }).toString()
+    const { page = 1, search = '', limit = 10, tab = 'all', status = 'published' } = tabOrParams
+    const q = new URLSearchParams({ page: String(page), search, limit: String(limit), tab, status }).toString()
     return api.get<{ data: ModelSet[] | { items: ModelSet[]; total: number } }>(`/api/model-sets?${q}`)
   },
+  getTargets: () => api.get<{ data: string[] }>('/api/model-sets/targets'),
   getModelSet: (id: number) =>
     api.get<{ data: ModelSet }>(`/api/model-sets/${id}`),
   createModelSet: (payload: Partial<ModelSet>) =>

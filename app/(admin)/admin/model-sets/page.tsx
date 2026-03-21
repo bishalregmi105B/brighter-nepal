@@ -17,7 +17,7 @@ export default function AdminModelSetsPage() {
 
   const fetchSets = (p: number, q: string) => {
     setLoading(true)
-    modelSetService.getModelSets({ page: p, search: q, limit: ROWS_PER_PAGE })
+    modelSetService.getModelSets({ page: p, search: q, limit: ROWS_PER_PAGE, status: 'all' })
       .then((res) => {
         const d = res.data as { items?: ModelSet[]; total?: number } | ModelSet[]
         if (Array.isArray(d)) { setSets(d); setTotal(d.length) }

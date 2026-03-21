@@ -19,7 +19,7 @@ export default function CreateModelSetPage() {
   const [title,     setTitle]     = useState('')
   const [duration,  setDuration]  = useState('120')
   const [level,     setLevel]     = useState('Medium')
-  const [exams,     setExams]     = useState<string[]>(['IOE'])
+  const [exams,     setExams]     = useState<string[]>([])
   const [availableExams, setAvailableExams] = useState<string[]>([])
   const [customExam, setCustomExam] = useState('')
   const [sections,  setSections]  = useState<Section[]>([{ id: 's1', subject: 'Mathematics', questions: 25 }])
@@ -78,7 +78,7 @@ export default function CreateModelSetPage() {
         title,
         duration_min: Number(duration),
         difficulty: level,
-        target_exams: exams,
+        targets: exams,
         status: (asDraft || !published) ? 'draft' : 'published',
         sections: sections.map(s => ({ subject: s.subject, questions: s.questions })),
         questions: questions.map(q => ({ text: q.text, options: q.options, answer_index: q.answer })),

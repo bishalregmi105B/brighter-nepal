@@ -58,7 +58,7 @@ export default function StudentDashboardPage() {
               Good morning, {user?.name?.split(' ')[0] ?? 'Scholar'}! 👋
             </h1>
             <p className="text-slate-300 text-base max-w-xl">
-              Welcome back to BridgeCourse Nepal — keep preparing for your IOE/IOM entrance!
+              Welcome back to BridgeCourse Nepal — keep preparing for your St. Xavier's, SOS & +2 Science entrance exams!
             </p>
           </div>
           <div className="flex items-center gap-6">
@@ -128,27 +128,7 @@ export default function StudentDashboardPage() {
           </div>
         </div>
 
-        {/* Performance Widget (static) */}
-        <div className="bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] p-6">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">Your Performance</p>
-          <div className="space-y-4">
-            {[
-              { label: 'Physics',     score: 72, color: 'bg-[#1a1a4e]'           },
-              { label: 'Chemistry',   score: 88, color: 'bg-[#2d6a6a]'           },
-              { label: 'Mathematics', score: 75, color: 'bg-on-primary-container' },
-            ].map((s) => (
-              <div key={s.label}>
-                <div className="flex justify-between mb-1">
-                  <span className="text-xs font-bold text-on-surface-variant">{s.label}</span>
-                  <span className="text-xs font-bold text-[#1a1a4e]">{s.score}%</span>
-                </div>
-                <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
-                  <div className={`h-full ${s.color} rounded-full`} style={{ width: `${s.score}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+
 
         {/* Recent Notices */}
         <div className="bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] p-6">
