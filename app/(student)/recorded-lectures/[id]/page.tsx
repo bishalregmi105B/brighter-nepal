@@ -55,87 +55,69 @@ export default function RecordedLectureVideoPage() {
     : '—'
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
-      {/* Back */}
-      <Link href="/recorded-lectures" className="flex items-center gap-2 text-sm font-semibold text-on-surface-variant hover:text-on-primary-container transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Recorded Lectures
-      </Link>
-
-      {/* Video player area */}
-      {playing ? (
-        <SecureVideoPlayer 
-          videoUrl={lecture.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'} // Fallback demo video if stream url missing 
-          title={lecture.title}
-          className="w-full shadow-2xl" 
-        />
-      ) : (
-        <div className="bg-black rounded-2xl overflow-hidden aspect-video relative group">
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#1a1a4e] to-[#0d0d2b] text-white">
-            <div className="mb-6 p-2 rounded-2xl bg-white/10">
-              <BookOpen className="w-10 h-10 text-on-primary-container" />
-            </div>
-            <h2 className="font-headline font-bold text-xl md:text-2xl text-center px-8 mb-2">{lecture.title}</h2>
-            <p className="text-white/50 text-sm mb-8">{lecture.teacher}</p>
-            <button
-              onClick={() => setPlaying(true)}
-              className="w-16 h-16 rounded-full bg-on-primary-container flex items-center justify-center shadow-xl hover:scale-110 transition-transform active:scale-95"
-            >
-              <div className="w-0 h-0 border-t-8 border-t-transparent border-l-[14px] border-l-white border-b-8 border-b-transparent ml-1" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Meta */}
-      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_20px_rgba(25,28,30,0.04)] space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="font-headline font-black text-xl md:text-2xl text-[#1a1a4e] mb-1">{lecture.title}</h1>
-            <p className="text-on-surface-variant text-sm font-medium">{lecture.teacher}</p>
-          </div>
-          <span className={cn('px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest', badgeClass)}>
-            {lecture.subject}
+    <div className="h-screen bg-[#0d0d1a] overflow-y-auto custom-scrollbar flex flex-col">
+      {/* Top Bar */}
+      <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-[#0d0d2b] flex-shrink-0 z-20 sticky top-0">
+        <div className="flex items-center gap-4">
+          <Link href="/recorded-lectures" className="text-white/70 hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <span className="flex items-center gap-1.5 bg-tertiary/20 px-2.5 py-1 rounded-full">
+            <BookOpen className="w-3 h-3 text-tertiary" />
+            <span className="text-tertiary text-[10px] font-black tracking-widest uppercase">Recorded</span>
           </span>
-        </div>
-
-        <div className="flex flex-wrap gap-4 text-sm text-on-surface-variant">
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-4 h-4" />
-            <span>{lecture.duration_min} min</span>
+          <div>
+            <p className="font-headline font-bold text-white text-sm truncate max-w-[200px] md:max-w-md">{lecture.title}</p>
+            <p className="text-white/50 text-[10px]">{lecture.teacher} · {lecture.subject}</p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4" />
-            <span>Recorded on {scheduledDate}</span>
-          </div>
-          {(lecture.watchers ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5">
-              <Users className="w-4 h-4" />
-              <span>{lecture.watchers?.toLocaleString()} watched live</span>
-            </div>
-          )}
         </div>
-
-        <div className="flex gap-3 pt-2">
-          {!playing && (
-            <button
-              onClick={() => setPlaying(true)}
-              className="flex items-center gap-2 bg-on-primary-container text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all"
-            >
-              <div className="w-0 h-0 border-t-5 border-t-transparent border-l-8 border-l-white border-b-5 border-b-transparent" /> Play Lecture
-            </button>
-          )}
+        <div className="flex items-center gap-3 text-white/60">
+          <Users className="w-4 h-4" />
+          <span className="text-sm font-medium hidden sm:inline">{(lecture.watchers ?? 0).toLocaleString()} views</span>
         </div>
       </div>
 
-      {/* Related lectures placeholder */}
-      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_20px_rgba(25,28,30,0.04)]">
-        <h3 className="font-headline font-bold text-[#1a1a4e] mb-4">More {lecture.subject} Lectures</h3>
-        <Link
-          href="/recorded-lectures"
-          className="text-on-primary-container font-bold text-sm hover:underline flex items-center gap-1"
-        >
-          Browse all recorded lectures →
-        </Link>
+      {/* Video Content Area */}
+      <div className="w-full max-w-6xl mx-auto flex flex-col flex-1">
+        {playing ? (
+          <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 border-b border-white/5 shadow-2xl">
+            <SecureVideoPlayer 
+              videoUrl={lecture.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'} 
+              title={lecture.title}
+              className="w-full h-full rounded-none" 
+            />
+          </div>
+        ) : (
+          <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 border-b border-white/5 shadow-2xl group cursor-pointer" onClick={() => setPlaying(true)}>
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a4e]/80 to-[#0d0d2b]/95 z-0" />
+            <div className="z-10 flex flex-col items-center justify-center text-white">
+              <div className="mb-6 w-20 h-20 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md group-hover:scale-110 group-hover:bg-white/20 transition-all border border-white/20">
+                <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-white border-b-[10px] border-b-transparent ml-1" />
+              </div>
+              <h2 className="font-headline font-bold text-2xl text-center px-8 mb-2 drop-shadow-lg">{lecture.title}</h2>
+              <p className="text-white/50 text-sm font-medium">Click anywhere to play</p>
+            </div>
+          </div>
+        )}
+
+        {/* Details Area below Video */}
+        <div className="p-6 md:p-8 text-white space-y-6">
+          <div className="flex flex-wrap items-center gap-3">
+             <span className="bg-white/10 border border-white/10 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{lecture.subject}</span>
+             <span className="text-white/50 text-sm font-medium flex items-center gap-1.5"><Clock className="w-4 h-4"/> {lecture.duration_min} mins</span>
+             <span className="text-white/50 text-sm font-medium flex items-center gap-1.5"><Calendar className="w-4 h-4"/> Recorded on {scheduledDate}</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-headline font-bold leading-tight">{lecture.title}</h1>
+          <div className="flex items-center gap-4 pt-2">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#c0622f] to-[#1a1a4e] flex items-center justify-center font-bold text-lg shadow-lg">
+              {lecture.teacher?.[0] ?? 'T'}
+            </div>
+            <div>
+              <p className="font-bold text-sm text-white/80">Instructor</p>
+              <p className="text-white font-medium">{lecture.teacher}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

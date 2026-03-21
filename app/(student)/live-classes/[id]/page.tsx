@@ -55,8 +55,8 @@ export default function LiveClassRoomPage() {
   return (
     <div className="h-screen flex flex-col md:flex-row bg-[#0d0d1a] overflow-hidden">
       {/* Video Side (left on desktop, top on mobile) */}
-      <div className="flex flex-col w-full md:flex-1 min-w-0">
-        <div className="h-16 md:h-18 px-4 flex items-center justify-between border-b border-surface-container/10 bg-[#0d0d2b] flex-shrink-0 z-20">
+      <div className="flex flex-col w-full md:flex-1 min-w-0 overflow-y-auto custom-scrollbar">
+        <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-[#0d0d2b] flex-shrink-0 z-20 sticky top-0">
           <div className="flex items-center gap-4">
             <button className="md:hidden text-white/70" onClick={() => router.back()}><ArrowLeft className="w-5 h-5"/></button>
             <span className="flex items-center gap-1.5 bg-error/90 px-2.5 py-1 rounded-full">
@@ -74,12 +74,29 @@ export default function LiveClassRoomPage() {
           </div>
         </div>
 
-        <div className="w-full aspect-video md:flex-1 md:h-full bg-black flex items-center justify-center min-h-0 relative">
+        <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 border-b border-white/5 shadow-2xl">
           <SecureVideoPlayer
             videoUrl={cls?.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
             title={cls?.title}
             className="w-full h-full rounded-none"
           />
+        </div>
+
+        {/* Class Details Area below Video */}
+        <div className="p-6 md:p-8 text-white space-y-4 max-w-4xl">
+          <div className="flex flex-wrap items-center gap-3">
+             <span className="bg-white/10 border border-white/10 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{cls?.subject}</span>
+             <span className="text-white/50 text-sm font-medium">{cls?.duration_min} minutes</span>
+             {cls?.scheduled_at && <span className="text-white/50 text-sm font-medium">· {new Date(cls.scheduled_at).toLocaleDateString()}</span>}
+          </div>
+          <h1 className="text-2xl md:text-3xl font-headline font-bold">{cls?.title}</h1>
+          <div className="flex items-center gap-3 pt-2">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a1a4e] to-[#2d6a6a] flex items-center justify-center font-bold">{cls?.teacher?.[0] ?? 'T'}</div>
+            <div>
+              <p className="font-bold text-sm">Instructor</p>
+              <p className="text-white/70 text-xs">{cls?.teacher}</p>
+            </div>
+          </div>
         </div>
       </div>
 
