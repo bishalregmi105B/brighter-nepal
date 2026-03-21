@@ -52,7 +52,9 @@ export default function ExamPage() {
     if (store.exam?.id === params.id) { setExam(store.exam); setLoading(false); return }
     modelSetService.getModelSet(Number(params.id)).then((res) => {
       const built = buildExamFromModelSet(res.data as Parameters<typeof buildExamFromModelSet>[0])
-      store.startExam(built, built.duration)
+      if (built.questions.length > 0) {
+        store.startExam(built, built.duration)
+      }
       setExam(built)
     }).finally(() => setLoading(false))
   }, [params.id])

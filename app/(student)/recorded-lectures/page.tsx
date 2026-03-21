@@ -92,9 +92,6 @@ export default function RecordedLecturesPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-outline font-medium">{(lec.watchers ?? 0).toLocaleString()} views</span>
                   <div className="flex gap-2">
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container text-on-surface text-xs font-bold rounded-lg hover:bg-surface-container-high transition-colors">
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </button>
                     <Link href={`/recorded-lectures/${lec.id}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c0622f] text-white text-xs font-bold rounded-lg hover:bg-[#a14f24] transition-colors">
                       <Play className="w-3.5 h-3.5 fill-white" /> Watch
                     </Link>

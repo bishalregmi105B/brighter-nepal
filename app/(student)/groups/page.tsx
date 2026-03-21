@@ -29,8 +29,8 @@ export default function GroupsPage() {
       const g = res.data
       if (!g) { setLoading(false); return }
       setGroup(g)
-      groupService.getGroupMessages(g.id).then((msgRes) => {
-        setMessages(msgRes.data?.items ?? [])
+      groupService.getMessages(g.id).then((msgRes) => {
+        setMessages(msgRes.data ?? [])
       }).finally(() => setLoading(false))
     }).catch(() => setLoading(false))
   }, [])
@@ -39,8 +39,8 @@ export default function GroupsPage() {
   useEffect(() => {
     if (!group) return
     const interval = setInterval(() => {
-      groupService.getGroupMessages(group.id).then((msgRes) => {
-        setMessages(msgRes.data?.items ?? [])
+      groupService.getMessages(group.id).then((msgRes) => {
+        setMessages(msgRes.data ?? [])
       })
     }, 5000)
     return () => clearInterval(interval)

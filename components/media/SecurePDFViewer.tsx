@@ -1,51 +1,46 @@
 'use client'
 /**
- * SecurePDFViewer — renders a PDF inline using an <iframe> with security protections:
- *  - Toolbar download buttons disabled via PDF.js viewer params (for browsers that support it)
- *  - Right-click context-menu blocked on the container
- *  - Overlay div blocks direct access to the iframe (prevents drag-to-download)
- *  - No external download button
- *  - Uses Google Docs Viewer as fallback for non-inline PDFs
- *
- * For maximum security the PDF should be served via a signed/token-protected URL from the API.
- * This component handles the UI layer protection only.
+ * SecurePDFViewer — renders a PDF natively using react-pdf.
+ *  - No download or print buttons exist in the UI.
+ *  - Right-click context-menu blocked on the container to prevent easy saving.
+ *  - True security must be enforced by signed/expiring URLs from the backend.
  */
-import { useState } from 'react'
-import { FileText, Loader2, ShieldCheck, ZoomIn, ZoomOut } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { FileText, Loader2, ShieldCheck, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
+import { Document, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/AnnotationLayer.css'
+import 'react-pdf/dist/Page/TextLayer.css'
 import { cn } from '@/lib/utils/cn'
 
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+
 interface SecurePDFViewerProps {
-  /** URL to the PDF file — should be a signed, time-limited URL from the API */
   pdfUrl:     string
   title?:     string
   className?: string
 }
 
-/** Build a viewer URL that disables toolbar download in compatible browsers */
-function buildViewerUrl(raw: string): string {
-  try {
-    const u = new URL(raw)
-    // Google Docs Viewer
-    if (!raw.includes('google.com/viewer') && !raw.includes('.google.com')) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(raw)}&embedded=true`
-    }
-    // Native PDF.js style params
-    u.searchParams.set('toolbar', '0')
-    u.searchParams.set('navpanes', '0')
-    u.searchParams.set('scrollbar', '0')
-    return u.toString()
-  } catch {
-    // Fallback — use Google Docs viewer
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(raw)}&embedded=true`
-  }
-}
-
 export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerProps) {
-  const [loaded, setLoaded]   = useState(false)
-  const [error,  setError]    = useState(false)
-  const [zoom,   setZoom]     = useState(100)  // percentage
+  const [numPages, setNumPages] = useState<number>(0)
+  const [pageNumber, setPageNumber] = useState<number>(1)
+  const [scale, setScale] = useState<number>(1.0)
+  const [error, setError] = useState<boolean>(false)
 
-  const viewerUrl = buildViewerUrl(pdfUrl)
+  // Reset state when url changes
+  useEffect(() => {
+    setPageNumber(1)
+    setError(false)
+  }, [pdfUrl])
+
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages)
+    setError(false)
+  }
+
+  function onDocumentLoadError() {
+    setError(true)
+  }
 
   const blockContextMenu = (e: React.MouseEvent) => e.preventDefault()
 
@@ -55,73 +50,99 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
       onContextMenu={blockContextMenu}
     >
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#111] border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2 text-white/70 text-xs font-semibold truncate">
+      <div className="flex flex-wrap items-center justify-between px-4 py-3 bg-[#111] border-b border-white/10 shrink-0 gap-4">
+        <div className="flex items-center gap-2 text-white/70 text-sm font-semibold truncate max-w-[40%]">
           <FileText className="w-4 h-4 text-red-400 shrink-0" />
           <span className="truncate">{title ?? 'Document Preview'}</span>
         </div>
-        <div className="flex items-center gap-2">
+        
+        <div className="flex flex-1 items-center justify-end gap-4 min-w-[200px]">
+          {/* Pagination */}
+          <div className="flex items-center gap-2 bg-white/5 rounded-lg border border-white/10 p-1">
+            <button
+              onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+              disabled={pageNumber <= 1 || numPages === 0}
+              className="p-1 text-white/70 hover:text-white disabled:opacity-30 disabled:hover:text-white/70 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-white/50 text-xs font-mono font-medium px-2">
+              {numPages ? `${pageNumber} / ${numPages}` : '-- / --'}
+            </span>
+            <button
+              onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
+              disabled={pageNumber >= numPages || numPages === 0}
+              className="p-1 text-white/70 hover:text-white disabled:opacity-30 disabled:hover:text-white/70 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-white/10" />
+
           {/* Zoom controls */}
-          <button
-            onClick={() => setZoom((z) => Math.max(60, z - 10))}
-            className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
-            title="Zoom out"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <span className="text-white/40 text-xs w-10 text-center">{zoom}%</span>
-          <button
-            onClick={() => setZoom((z) => Math.min(200, z + 10))}
-            className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
-            title="Zoom in"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setScale((z) => Math.max(0.5, z - 0.25))}
+              className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-white/40 text-xs w-12 text-center font-mono">{Math.round(scale * 100)}%</span>
+            <button
+              onClick={() => setScale((z) => Math.min(3.0, z + 0.25))}
+              className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Security badge */}
-          <div className="flex items-center gap-1 bg-white/5 text-white/40 text-[10px] font-bold px-2 py-1 rounded-full ml-2">
+          <div className="hidden sm:flex items-center gap-1 bg-white/5 text-white/40 text-[10px] font-bold px-2.5 py-1.5 rounded-full ml-2">
             <ShieldCheck className="w-3 h-3 text-green-400" />
-            Secure Preview
+            Secure
           </div>
         </div>
       </div>
 
       {/* PDF content area */}
-      <div className="relative flex-1" style={{ minHeight: '600px' }}>
-        {/* Loading overlay */}
-        {!loaded && !error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1a1a] text-white/40 gap-3 z-10">
-            <Loader2 className="w-8 h-8 animate-spin text-on-primary-container" />
-            <p className="text-sm">Loading document…</p>
-          </div>
-        )}
-
+      <div className="relative flex-1 bg-[#1a1a1a] overflow-auto flex justify-center py-6" style={{ minHeight: '600px', maxHeight: '80vh' }}>
+        
         {/* Error state */}
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1a1a] text-white/40 gap-3 p-8 text-center z-10">
-            <FileText className="w-10 h-10 opacity-30" />
-            <p className="text-sm">Unable to preview this document. The file might not be publicly accessible.</p>
+            <AlertCircle className="w-10 h-10 text-error opacity-80" />
+            <p className="text-sm">Unable to preview this document. The file might not be publicly accessible or the URL is invalid.</p>
           </div>
         )}
 
-        {/* PDF iframe */}
-        <div
-          style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center', height: `${(100 / zoom) * 100}%` }}
-          className="w-full"
+        <Document
+          file={pdfUrl}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+          loading={
+            <div className="flex flex-col items-center justify-center text-white/40 gap-3 mt-20">
+              <Loader2 className="w-8 h-8 animate-spin text-on-primary-container" />
+              <p className="text-sm">Loading document...</p>
+            </div>
+          }
+          className="flex flex-col items-center shadow-2xl"
         >
-          <iframe
-            src={viewerUrl}
-            className="w-full border-0"
-            style={{ height: '700px', minHeight: '500px' }}
-            title={title ?? 'PDF Preview'}
-            onLoad={()  => setLoaded(true)}
-            onError={() => setError(true)}
-            loading="lazy"
-            sandbox="allow-scripts allow-same-origin allow-forms"
-          />
-        </div>
+          {numPages > 0 && !error && (
+            <div className="border border-white/10 bg-white">
+              <Page
+                pageNumber={pageNumber}
+                scale={scale * 1.2} // Base scale to look sharp
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </div>
+          )}
+        </Document>
 
-        {/* Invisible protection overlay — blocks right-click and drag-to-download on the iframe */}
-        {/* NOTE: This is a UI-layer deterrent; true security must come from the server (signed URLs, no public access). */}
+        {/* Invisible protection overlay — blocks right-click and drag-to-download on the canvas */}
         <div
           className="absolute inset-0 z-20 pointer-events-none"
           style={{ background: 'transparent' }}

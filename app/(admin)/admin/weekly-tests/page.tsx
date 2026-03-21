@@ -10,9 +10,9 @@ type TestStatus = 'live' | 'upcoming' | 'completed' | 'draft'
 
 const statusStyle: Record<string, { label: string; bg: string; text: string; Icon: React.ElementType }> = {
   live:      { label: 'Live Now',   bg: 'bg-error-container', text: 'text-error',                      Icon: RadioTower   },
-  upcoming:  { label: 'Scheduled', bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed-variant',  Icon: Calendar     },
-  completed: { label: 'Completed', bg: 'bg-tertiary-fixed',  text: 'text-on-tertiary-fixed-variant',   Icon: CheckCircle2 },
-  draft:     { label: 'Draft',     bg: 'bg-primary-fixed',   text: 'text-on-primary-fixed-variant',    Icon: Circle       },
+  scheduled: { label: 'Scheduled',  bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed-variant',  Icon: Calendar     },
+  completed: { label: 'Completed',  bg: 'bg-tertiary-fixed',  text: 'text-on-tertiary-fixed-variant',   Icon: CheckCircle2 },
+  draft:     { label: 'Draft',      bg: 'bg-primary-fixed',   text: 'text-on-primary-fixed-variant',    Icon: Circle       },
 }
 
 export default function AdminWeeklyTestsPage() {

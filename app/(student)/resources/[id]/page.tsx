@@ -133,8 +133,8 @@ export default function ResourceDetailPage() {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-3 pt-2">
-            {/* Show download button only for 'notes' or other non-secured formats if needed */}
-            {!['pdf', 'video'].includes(resource.format) && (
+            {/* Show download button only for open formats we want easily downloadable (like raw zips perhaps, though right now we secure pdf/notes/video) */}
+            {!['pdf', 'video', 'notes'].includes(resource.format) && (
               <button
                 onClick={handleDownload}
                 className={cn(
@@ -149,8 +149,8 @@ export default function ResourceDetailPage() {
               </button>
             )}
             
-            {/* Open in new tab only for non-secure files */}
-            {!['pdf', 'video'].includes(resource.format) && resource.file_url && resource.file_url !== '#' && (
+            {/* Open in new tab only for completely non-secure files */}
+            {!['pdf', 'video', 'notes'].includes(resource.format) && resource.file_url && resource.file_url !== '#' && (
               <a
                 href={resource.file_url}
                 target="_blank"
@@ -177,7 +177,7 @@ export default function ResourceDetailPage() {
       )}
 
       {/* Secure PDF Viewer */}
-      {resource.format === 'pdf' && resource.file_url && resource.file_url !== '#' && (
+      {['pdf', 'notes'].includes(resource.format) && resource.file_url && resource.file_url !== '#' && (
         <SecurePDFViewer
           pdfUrl={resource.file_url}
           title={resource.title}
