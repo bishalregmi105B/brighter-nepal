@@ -116,8 +116,8 @@ export default function LiveClassRoomPage() {
           {/* Live / offline status */}
           <div className="flex items-center px-3">
             {connected
-              ? <Wifi className="w-3.5 h-3.5 text-green-500" title="Connected" />
-              : <WifiOff className="w-3.5 h-3.5 text-slate-400 animate-pulse" title="Reconnecting…" />}
+              ? <span title="Connected"><Wifi className="w-3.5 h-3.5 text-green-500" /></span>
+              : <span title="Reconnecting…"><WifiOff className="w-3.5 h-3.5 text-slate-400 animate-pulse" /></span>}
           </div>
         </div>
 
