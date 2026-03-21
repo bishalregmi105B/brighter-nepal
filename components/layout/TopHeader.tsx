@@ -1,12 +1,13 @@
 'use client'
 // TopHeader — fully responsive top header with real logged-in user data
-import { useState } from 'react'
-import { Bell, Settings, Search, LogOut, Menu, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Bell, Settings, Search, LogOut, Menu, X, ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import { useAuth } from '@/hooks/useAuth'
 import { useSidebarStore } from '@/lib/store/sidebarStore'
+import { noticeService, Notice } from '@/services/noticeService'
 
 interface TopHeaderProps {
   role:        'student' | 'admin'
@@ -19,11 +20,34 @@ export function TopHeader({ role, pageTitle, showSearch = true }: TopHeaderProps
   const { toggleMobile } = useSidebarStore()
   const router = useRouter()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [notices, setNotices] = useState<Notice[]>([])
+  const [showNotices, setShowNotices] = useState(false)
+  const noticesRef = useRef<HTMLDivElement>(null)
 
   const handleLogout = async () => {
     await logout()
     router.replace('/login')
   }
+
+  useEffect(() => {
+    if (!loading && user) {
+      noticeService.getNotices().then((res: any) => {
+        const payload = res?.data?.data || res?.data || res
+        if (Array.isArray(payload)) setNotices(payload)
+        else if (payload && 'items' in payload) setNotices(payload.items as Notice[])
+      }).catch(console.error)
+    }
+  }, [loading, user])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (noticesRef.current && !noticesRef.current.contains(e.target as Node)) {
+        setShowNotices(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const planLabel = user?.plan === 'paid' ? 'Premium' : 'Free Trial'
   const roleLabel = role === 'admin' ? 'Admin' : planLabel
@@ -76,9 +100,55 @@ export function TopHeader({ role, pageTitle, showSearch = true }: TopHeaderProps
             </button>
           )}
 
-          <button className="p-2 text-slate-500 hover:text-[#c0622f] transition-colors hidden sm:block">
-            <Bell className="w-5 h-5" />
-          </button>
+          {/* Notifications Dropdown */}
+          <div className="relative hidden sm:block" ref={noticesRef}>
+            <button 
+              onClick={() => setShowNotices(!showNotices)}
+              className={cn(
+                "p-2 transition-colors relative rounded-full",
+                showNotices ? "bg-slate-100 text-[#1a1a4e]" : "text-slate-500 hover:text-[#c0622f] hover:bg-slate-100/50"
+              )}
+            >
+              <Bell className="w-5 h-5" />
+              {notices.length > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-error text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white shadow-sm">
+                  {notices.length > 99 ? '99+' : notices.length}
+                </span>
+              )}
+            </button>
+
+            {showNotices && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 animate-in fade-in slide-in-from-top-2 z-50 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+                  <h3 className="font-bold text-[#1a1a4e]">Notifications</h3>
+                  <span className="text-xs font-bold text-white bg-[#c0622f] px-2 py-0.5 rounded-full">{notices.length} New</span>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                  {notices.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-sm">No new notifications</div>
+                  ) : (
+                    notices.slice(0, 5).map(notice => (
+                      <div key={notice.id} className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors last:border-0">
+                        <p className="text-sm font-bold text-[#1a1a4e] mb-1 line-clamp-1">{notice.title}</p>
+                        <p className="text-xs text-slate-500 line-clamp-2">{notice.body}</p>
+                        <p className="text-[10px] text-slate-400 mt-2 font-medium">{new Date(notice.created_at).toLocaleDateString()}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="p-2 border-t border-slate-100 bg-slate-50/50">
+                  <Link 
+                    href={role === 'admin' ? '/admin/notices' : '/notices'} 
+                    onClick={() => setShowNotices(false)}
+                    className="flex items-center justify-center gap-1.5 w-full py-2 text-sm font-bold text-[#c0622f] hover:text-[#8a421c] transition-colors rounded-lg hover:bg-[#c0622f]/10"
+                  >
+                    View All Notices <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+
           {role === 'admin' ? (
             <Link href="/admin/settings" className="p-2 text-slate-500 hover:text-[#c0622f] transition-colors hidden sm:block">
               <Settings className="w-5 h-5" />
