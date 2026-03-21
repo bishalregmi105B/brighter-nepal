@@ -130,40 +130,25 @@ export function ResourceViewer({ resource, className }: Props) {
     }
     return (
       <div className={cn('bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] overflow-hidden', className)}>
-        {/* Preview banner */}
-        <div className="bg-gradient-to-br from-[#1a1a4e] to-[#2d3a6e] px-6 py-8 flex flex-col items-center text-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
-            <Globe className="w-8 h-8 text-sky-300" />
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-3 bg-[#111] border-b border-white/10">
+          <div className="flex items-center gap-2 text-white/70 text-sm font-semibold">
+            <Globe className="w-4 h-4 text-sky-400" />
+            <span className="truncate max-w-[240px]">{resource.title}</span>
           </div>
-          <div>
-            <p className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">External Resource</p>
-            <p className="text-white font-bold text-lg leading-snug max-w-md">{resource.title}</p>
-            {resource.description && (
-              <p className="text-white/60 text-sm mt-2 max-w-md leading-relaxed">{resource.description}</p>
-            )}
-          </div>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#c0622f] text-white font-bold rounded-xl hover:bg-[#a14f24] active:scale-95 transition-all shadow-lg"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Open Website
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-white transition-colors">
+            <ExternalLink className="w-3.5 h-3.5" /> Open full site
           </a>
         </div>
         {/* Embedded preview via iframe */}
-        <div className="relative overflow-hidden border-t border-slate-100" style={{ height: '65vh', minHeight: '400px' }}>
+        <div className="relative overflow-hidden bg-slate-50" style={{ height: '75vh', minHeight: '500px' }}>
           <iframe
             src={url}
             className="w-full h-full border-0"
             title={resource.title}
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           />
-          {/* Overlay label */}
-          <div className="absolute bottom-3 right-3 bg-black/60 text-white/70 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 pointer-events-none">
-            <Globe className="w-3 h-3" /> External site preview
-          </div>
         </div>
       </div>
     )
