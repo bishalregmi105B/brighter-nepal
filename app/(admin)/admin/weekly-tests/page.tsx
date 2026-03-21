@@ -1,7 +1,7 @@
 'use client'
 // Admin Weekly Tests — fetches real data from weeklyTestService
 import { useEffect, useState } from 'react'
-import { Plus, Calendar, Users, Clock, Eye, BarChart2, RadioTower, CheckCircle2, Circle, Loader2 } from 'lucide-react'
+import { Plus, Calendar, Users, Clock, Eye, BarChart2, RadioTower, CheckCircle2, Circle, Loader2, Pencil, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { weeklyTestService, type WeeklyTest } from '@/services/weeklyTestService'
 import { cn } from '@/lib/utils/cn'
@@ -13,6 +13,7 @@ const statusStyle: Record<string, { label: string; bg: string; text: string; Ico
   scheduled: { label: 'Scheduled',  bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed-variant',  Icon: Calendar     },
   completed: { label: 'Completed',  bg: 'bg-tertiary-fixed',  text: 'text-on-tertiary-fixed-variant',   Icon: CheckCircle2 },
   draft:     { label: 'Draft',      bg: 'bg-primary-fixed',   text: 'text-on-primary-fixed-variant',    Icon: Circle       },
+  upcoming:  { label: 'Upcoming',   bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed-variant',  Icon: Calendar     },
 }
 
 export default function AdminWeeklyTestsPage() {
@@ -73,7 +74,7 @@ export default function AdminWeeklyTestsPage() {
               {tests.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-16 text-outline font-medium">No weekly tests found.</td></tr>
               ) : tests.map((test) => {
-                const style = statusStyle[test.status ?? 'draft']
+                const style = statusStyle[test.status ?? 'draft'] || statusStyle.draft
                 const Icon = style.Icon
                 return (
                   <tr key={test.id} className="hover:bg-slate-50 transition-colors group">
@@ -91,10 +92,17 @@ export default function AdminWeeklyTestsPage() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <Link href={`/admin/weekly-tests/${test.id}/edit`} className="hover:text-[#c0622f] transition-colors" title="Edit">
+                          <Pencil className="w-4 h-4" />
+                        </Link>
                         {test.status === 'live' && (
-                          <Link href={`/admin/weekly-tests/${test.id}/monitor`} className="hover:text-[#c0622f] transition-colors" title="Monitor"><Eye className="w-4 h-4" /></Link>
+                          <Link href={`/admin/weekly-tests/${test.id}/monitor`} className="hover:text-[#c0622f] transition-colors" title="Monitor">
+                            <Eye className="w-4 h-4" />
+                          </Link>
                         )}
-                        <Link href={`/admin/weekly-tests/${test.id}/monitor`} className="hover:text-[#c0622f] transition-colors" title="Analytics"><BarChart2 className="w-4 h-4" /></Link>
+                        <Link href={`/admin/weekly-tests/${test.id}/monitor`} className="hover:text-[#c0622f] transition-colors" title="Analytics">
+                          <BarChart2 className="w-4 h-4" />
+                        </Link>
                       </div>
                     </td>
                   </tr>

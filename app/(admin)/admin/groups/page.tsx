@@ -1,6 +1,7 @@
 'use client'
 // Admin Groups — fetches real data from groupService
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Plus, Users, Pin, Archive, Settings, MessageSquare, BadgeCheck, Loader2 } from 'lucide-react'
 import { groupService, type Group } from '@/services/groupService'
 import { cn } from '@/lib/utils/cn'
@@ -8,15 +9,19 @@ import { cn } from '@/lib/utils/cn'
 export default function AdminGroupsPage() {
   const [groups,  setGroups]  = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
 
-  useEffect(() => {
-    // API returns all groups for admin
-    Promise.all([])  // placeholder: API may have /api/groups (admin list)
+  const fetchGroups = () => {
+    setLoading(true)
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'}/api/groups`, {
       headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('bn_token') ?? '' : ''}` }
     }).then(r => r.json()).then(d => {
       setGroups(d.data?.items ?? d.data ?? [])
     }).catch(() => {}).finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchGroups()
   }, [])
 
   const totalMembers  = groups.reduce((s, g) => s + (g.member_count ?? 0), 0)
@@ -28,7 +33,7 @@ export default function AdminGroupsPage() {
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Study Groups</h2>
           <p className="text-slate-500 font-medium">BridgeCourse Nepal — manage batch groups and broadcast channels.</p>
         </div>
-        <button className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
+        <button onClick={() => setShowModal(true)} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
           <Plus className="w-5 h-5" /> Create Group
         </button>
       </div>
@@ -70,7 +75,10 @@ export default function AdminGroupsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <button className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f] transition-colors"><Settings className="w-4 h-4" /></button>
+                <Link href={`/admin/groups/${group.id}`} className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f] transition-colors" title="Enter Chat">
+                  <MessageSquare className="w-4 h-4" />
+                </Link>
+                <button className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-on-primary-container transition-colors"><Settings className="w-4 h-4" /></button>
                 <button className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-error transition-colors"><Archive className="w-4 h-4" /></button>
                 <button className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-on-primary-container transition-colors"><Pin className="w-4 h-4" /></button>
               </div>
@@ -78,6 +86,70 @@ export default function AdminGroupsPage() {
           ))}
         </div>
       )}
+
+      {showModal && (
+        <CreateGroupModal onClose={() => setShowModal(false)} onSaved={fetchGroups} />
+      )}
+    </div>
+  )
+}
+
+function CreateGroupModal({ onClose, onSaved }: { onClose: () => void, onSaved: () => void }) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [memberCount, setMemberCount] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError('Group name is required.'); return }
+    setSaving(true)
+    setError('')
+    try {
+      await groupService.createGroup({ name: name.trim(), description: description.trim(), member_count: memberCount })
+      onSaved()
+      onClose()
+    } catch {
+      setError('Failed to create group.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full md:max-w-md bg-white md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col">
+        <div className="px-6 py-4 border-b border-surface-container flex items-center justify-between">
+          <h2 className="font-headline font-bold text-xl text-[#1a1a4e]">Create Study Group</h2>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-6 space-y-5">
+          {error && <div className="p-3 bg-error-container text-error rounded-xl text-sm font-bold">{error}</div>}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Group Name</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="E.g., +2 Science Bridge Course"
+              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border-none focus:ring-2 focus:ring-on-primary-container text-sm font-bold placeholder:font-medium placeholder:text-outline" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description (Optional)</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Short description..."
+              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border-none focus:ring-2 focus:ring-on-primary-container text-sm font-medium placeholder:text-outline resize-none" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Initial Member Count</label>
+            <input type="number" value={memberCount} onChange={e => setMemberCount(Number(e.target.value) || 0)} min={0}
+              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border-none focus:ring-2 focus:ring-on-primary-container text-sm font-bold" />
+          </div>
+        </div>
+        <div className="p-6 border-t border-surface-container bg-surface-container-low flex justify-end gap-3 rounded-b-2xl">
+          <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="bg-[#1a1a4e] text-white px-8 py-2.5 rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all text-sm shadow-lg shadow-[#1a1a4e]/20 disabled:opacity-50 flex items-center gap-2">
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating</> : 'Create Group'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

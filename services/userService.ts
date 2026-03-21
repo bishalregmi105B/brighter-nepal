@@ -16,6 +16,13 @@ export interface User {
   joined_method?: string
 }
 
+export interface ContactMethod {
+  id: number
+  name: string
+  channel: string   // whatsapp | messenger | facebook | other
+  is_active: boolean
+}
+
 export interface PaginatedUsers {
   data: { items: User[]; total: number; page: number; pages: number }
 }
@@ -35,7 +42,7 @@ export const userService = {
     return api.get<PaginatedUsers>(`/api/users?${q}`)
   },
   getUser: (id: number) => api.get<{ data: User }>(`/api/users/${id}`),
-  updateUser: (id: number, payload: Partial<User> & { admin_note?: string; password?: string }) =>
+  updateUser: (id: number, payload: Partial<User> & { admin_note?: string; password?: string; paid_amount?: number }) =>
     api.patch<{ data: User }>(`/api/users/${id}`, payload),
   deleteUser: (id: number) => api.delete(`/api/users/${id}`),
   bulkCreate: (users: { name: string; email: string; password?: string; plan?: string; whatsapp?: string }[]) =>
@@ -44,4 +51,11 @@ export const userService = {
     api.get<{ data: UserStats }>('/api/users/stats'),
   shiftToPaid: (id: number, amount: number, method = 'cash') =>
     api.post<{ data: User }>(`/api/users/${id}/shift-to-paid`, { amount, method }),
+  // Contact methods (admin-configurable joined_via dropdown)
+  getContactMethods: () =>
+    api.get<{ data: ContactMethod[] }>('/api/users/contact-methods'),
+  createContactMethod: (name: string, channel: string) =>
+    api.post<{ data: ContactMethod }>('/api/users/contact-methods', { name, channel }),
+  deleteContactMethod: (id: number) =>
+    api.delete(`/api/users/contact-methods/${id}`),
 }

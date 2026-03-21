@@ -16,6 +16,8 @@ export const resourceService = {
   },
   getResource: (id: number) =>
     api.get<{ data: Resource }>(`/api/resources/${id}`),
+  getSubjects: () =>
+    api.get<{ data: string[] }>('/api/resources/subjects'),
   createResource: (payload: Partial<Resource>) =>
     api.post<{ data: Resource }>('/api/resources', payload),
   updateResource: (id: number, payload: Partial<Resource>) =>

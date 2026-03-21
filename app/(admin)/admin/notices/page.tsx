@@ -21,6 +21,7 @@ export default function AdminNoticesPage() {
   const [notices,  setNotices]  = useState<Notice[]>([])
   const [loading,  setLoading]  = useState(true)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
   const fetchNotices = () => {
     setLoading(true)
@@ -48,7 +49,7 @@ export default function AdminNoticesPage() {
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Notices</h2>
           <p className="text-slate-500 font-medium">BridgeCourse Nepal — publish announcements to all students.</p>
         </div>
-        <button className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
+        <button onClick={() => setShowModal(true)} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
           <Plus className="w-5 h-5" /> New Notice
         </button>
       </div>
@@ -95,7 +96,7 @@ export default function AdminNoticesPage() {
                       {notice.category}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-500 leading-relaxed line-clamp-2">{notice.body}</p>
+                  <p className="text-sm text-slate-500 leading-relaxed max-w-3xl">{notice.body}</p>
                   <p className="text-xs text-outline font-medium mt-2">{notice.created_at?.slice(0,10)}</p>
                 </div>
                 <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
@@ -128,6 +129,75 @@ export default function AdminNoticesPage() {
           </div>
         </div>
       )}
+
+      {/* Create modal */}
+      {showModal && (
+        <NoticeModal onClose={() => setShowModal(false)} onSaved={fetchNotices} />
+      )}
+    </div>
+  )
+}
+
+function NoticeModal({ onClose, onSaved }: { onClose: () => void, onSaved: () => void }) {
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [category, setCategory] = useState('general')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSave = async () => {
+    if (!title.trim() || !body.trim()) { setError('Title and message are required.'); return }
+    setSaving(true)
+    setError('')
+    try {
+      await noticeService.createNotice({ title: title.trim(), body: body.trim(), category })
+      onSaved()
+      onClose()
+    } catch {
+      setError('Failed to publish notice.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full md:max-w-xl bg-white md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col">
+        <div className="px-6 py-4 border-b border-surface-container flex items-center justify-between">
+          <h2 className="font-headline font-bold text-xl text-[#1a1a4e]">New Notice</h2>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-5">
+          {error && <div className="p-3 bg-error-container text-error rounded-xl text-sm font-bold">{error}</div>}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Title</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="E.g., Scholarship Exam Postponed"
+              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border-none focus:ring-2 focus:ring-on-primary-container text-sm font-bold placeholder:font-medium placeholder:text-outline" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Message Body</label>
+            <textarea value={body} onChange={e => setBody(e.target.value)} rows={4} placeholder="Full announcement text..."
+              className="w-full px-4 py-3 bg-surface-container-low rounded-xl border-none focus:ring-2 focus:ring-on-primary-container text-sm font-medium placeholder:text-outline resize-none" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Priority Level</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {['general', 'important', 'urgent', 'event'].map(cat => (
+                <button key={cat} onClick={() => setCategory(cat)} className={cn('py-2 text-xs font-bold rounded-lg border-2 capitalize transition-all',
+                  category === cat ? 'border-[#c0622f] bg-[#c0622f]/10 text-[#c0622f]' : 'border-surface-container text-slate-400 hover:border-slate-300')}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="p-6 border-t border-surface-container bg-surface-container-low flex justify-end gap-3 rounded-b-2xl">
+          <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors">Discard</button>
+          <button onClick={handleSave} disabled={saving} className="bg-[#1a1a4e] text-white px-8 py-2.5 rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all text-sm shadow-lg shadow-[#1a1a4e]/20 disabled:opacity-50 flex items-center gap-2">
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Publishing</> : 'Publish Notice'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

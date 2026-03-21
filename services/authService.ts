@@ -10,8 +10,8 @@ export interface AuthResponse {
 }
 
 export const authService = {
-  async login(email: string, password: string): Promise<AuthResponse['data']> {
-    const res = await api.post<AuthResponse>('/api/auth/login', { email, password })
+  async login(identifier: string, password: string): Promise<AuthResponse['data']> {
+    const res = await api.post<AuthResponse>('/api/auth/login', { identifier, password })
     if (res.data?.token) {
       localStorage.setItem('bn_token', res.data.token)
       localStorage.setItem('bn_user', JSON.stringify(res.data.user))

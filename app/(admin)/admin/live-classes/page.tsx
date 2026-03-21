@@ -13,6 +13,7 @@ const statusStyle: Record<string, { label: string; bg: string; text: string; Ico
   upcoming:  { label: 'Scheduled', bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed-variant', Icon: Calendar  },
   completed: { label: 'Completed', bg: 'bg-tertiary-fixed',  text: 'text-on-tertiary-fixed-variant',  Icon: Video     },
   cancelled: { label: 'Cancelled', bg: 'bg-slate-100',       text: 'text-slate-500',                  Icon: Clock     },
+  scheduled: { label: 'Scheduled', bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed-variant', Icon: Calendar  },
 }
 
 const STATUS_TABS: (SessionStatus | 'all')[] = ['all', 'live', 'upcoming', 'completed']
@@ -110,7 +111,7 @@ export default function AdminLiveClassesPage() {
               {displayed.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-16 text-outline font-medium">No sessions in this category.</td></tr>
               ) : displayed.map((session) => {
-                const s = statusStyle[session.status ?? 'upcoming']
+                const s = statusStyle[session.status ?? 'upcoming'] || statusStyle.upcoming || statusStyle.scheduled
                 const Icon = s.Icon
                 return (
                   <tr key={session.id} className="hover:bg-slate-50 transition-colors group">

@@ -1,14 +1,13 @@
 'use client'
 // Admin Model Set Edit — edit an existing model set
 // Reuses the same form pattern as create, pre-filled with existing data
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft, Plus, Trash2, BookOpen, Clock, BarChart2, Save } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 
 const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English']
 const LEVELS   = ['Easy', 'Medium', 'Hard']
-const EXAMS    = ['IOE', 'IOM', 'CEE', 'CSIT', 'NEB']
 
 interface Section { id: string; subject: string; questions: number }
 
@@ -18,6 +17,8 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
   const [duration,  setDuration]  = useState('120')
   const [level,     setLevel]     = useState('Hard')
   const [exams,     setExams]     = useState<string[]>(['IOE'])
+  const [availableExams, setAvailableExams] = useState<string[]>([])
+  const [customExam, setCustomExam] = useState('')
   const [sections,  setSections]  = useState<Section[]>([
     { id: 's1', subject: 'Mathematics', questions: 40 },
     { id: 's2', subject: 'Physics',     questions: 35 },
@@ -25,6 +26,23 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
   ])
   const [published, setPublished] = useState(true)
   const [saved,     setSaved]     = useState(false)
+
+  useEffect(() => {
+    // Load targets from API (need auth token via cookie — uses same fetch as rest of admin)
+    import('@/services/api').then(({ api }) => {
+      api.get<{ data: string[] }>('/api/model-sets/targets')
+        .then(r => { const d = r.data; setAvailableExams(Array.isArray(d) ? d : (d as { data?: string[] })?.data ?? []) })
+        .catch(() => setAvailableExams(['IOE', 'IOM', 'CEE', 'CSIT', 'NEB']))
+    })
+  }, [])
+
+  const addCustomExam = () => {
+    const e = customExam.trim().toUpperCase()
+    if (!e) return
+    if (!availableExams.includes(e)) setAvailableExams(prev => [...prev, e])
+    if (!exams.includes(e)) setExams(prev => [...prev, e])
+    setCustomExam('')
+  }
 
   const toggleExam = (exam: string) =>
     setExams((prev) => prev.includes(exam) ? prev.filter((e) => e !== exam) : [...prev, exam])
@@ -106,8 +124,8 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
           </div>
           <div className="md:col-span-2">
             <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Target Exams</label>
-            <div className="flex gap-2 flex-wrap">
-              {EXAMS.map((e) => (
+            <div className="flex gap-2 flex-wrap items-center">
+              {availableExams.map((e) => (
                 <button
                   key={e}
                   onClick={() => toggleExam(e)}
@@ -116,6 +134,18 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
                   {e}
                 </button>
               ))}
+              <div className="flex items-center gap-1">
+                <input
+                  value={customExam}
+                  onChange={e => setCustomExam(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addCustomExam()}
+                  placeholder="+ New exam"
+                  className="px-3 py-2 text-sm rounded-xl border border-dashed border-outline-variant text-slate-500 w-24 focus:outline-none focus:border-on-primary-container"
+                />
+                {customExam.trim() && (
+                  <button onClick={addCustomExam} className="px-2 py-2 text-xs font-bold bg-on-primary-container/10 text-on-primary-container rounded-xl hover:bg-on-primary-container/20">Add</button>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -54,13 +54,12 @@ const TYPE_CONFIG: Record<string, {
   },
 }
 
-const SUBJECTS     = ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'General']
-const SECTIONS     = ['Model Questions', 'Extra Study Materials', 'Short Notes', 'Reference Materials', '']
+const SECTIONS     = ['', 'Model Questions', 'Extra Study Materials', 'Short Notes', 'Reference Materials']
 const TYPE_FILTERS = ['All', 'pdf', 'video', 'link', 'notes', 'file', 'audio']
 
 // ── Empty form state ─────────────────────────────────────────────────────────
 const EMPTY_FORM = {
-  title: '', subject: 'Physics', format: 'pdf', section: '',
+  title: '', subject: '', format: 'pdf', section: '',
   file_url: '', size_label: '', tags: '', description: '', thumbnail_url: '',
 }
 
@@ -68,9 +67,10 @@ type FormState = typeof EMPTY_FORM
 
 // ── Modal Component ──────────────────────────────────────────────────────────
 function ResourceModal({
-  initial, onClose, onSaved,
+  initial, subjects, onClose, onSaved,
 }: {
   initial?: Resource | null
+  subjects: string[]
   onClose: () => void
   onSaved: (r: Resource) => void
 }) {
@@ -85,11 +85,13 @@ function ResourceModal({
     tags: Array.isArray(initial.tags) ? initial.tags.join(', ') : '',
     description: initial.description ?? '',
     thumbnail_url: initial.thumbnail_url ?? '',
-  } : EMPTY_FORM)
+  } : { ...EMPTY_FORM, subject: subjects[0] || '' })
+  const [customSubject, setCustomSubject] = useState('')
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
 
   const cfg = TYPE_CONFIG[form.format] ?? TYPE_CONFIG.pdf
+  const effectiveSubject = form.subject === '__new__' ? customSubject : form.subject
 
   function set(key: keyof FormState, value: string) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -98,9 +100,11 @@ function ResourceModal({
   async function handleSave() {
     if (!form.title.trim()) { setError('Title is required.'); return }
     if (!form.file_url.trim()) { setError('URL is required.'); return }
+    if (!effectiveSubject.trim()) { setError('Subject is required.'); return }
     setSaving(true); setError('')
     const payload = {
       ...form,
+      subject: effectiveSubject,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
     }
     try {
@@ -214,8 +218,17 @@ function ResourceModal({
                 onChange={e => set('subject', e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/20"
               >
-                {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="__new__">+ New subject...</option>
               </select>
+              {form.subject === '__new__' && (
+                <input
+                  value={customSubject}
+                  onChange={e => setCustomSubject(e.target.value)}
+                  placeholder="Enter new subject name"
+                  className="mt-2 w-full px-4 py-2.5 bg-slate-50 border border-[#c0622f]/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/20"
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Section</label>
@@ -289,11 +302,20 @@ function ResourceModal({
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
+  const [subjects,  setSubjects]  = useState<string[]>([])
   const [loading,   setLoading]   = useState(true)
   const [query,     setQuery]     = useState('')
   const [subject,   setSubject]   = useState('All')
   const [typeF,     setTypeF]     = useState('All')
   const [modal,     setModal]     = useState<{ open: boolean; editing?: Resource | null }>({ open: false })
+
+  // Load distinct subjects from API
+  useEffect(() => {
+    resourceService.getSubjects().then((res) => {
+      const subs = Array.isArray(res.data) ? res.data as string[] : (res.data as { data?: string[] })?.data ?? []
+      setSubjects(subs)
+    }).catch(() => {})
+  }, [])
 
   const fetchResources = () => {
     setLoading(true)
@@ -454,6 +476,7 @@ export default function AdminResourcesPage() {
       {modal.open && (
         <ResourceModal
           initial={modal.editing}
+          subjects={subjects}
           onClose={closeModal}
           onSaved={handleSaved}
         />

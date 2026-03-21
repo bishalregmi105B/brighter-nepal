@@ -43,31 +43,35 @@ export default function WeeklyTestsPage() {
             <p className="text-lg opacity-80 font-medium">
               {liveTest.duration_min} mins · {liveTest.question_count} questions · {liveTest.subject}
             </p>
-            <Link
-              href={`/weekly-tests/${liveTest.id}`}
-              className="inline-block bg-on-primary-container text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-lg shadow-on-primary-container/20"
-            >
-              Start Test Now →
-            </Link>
-          </div>
-          <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[2rem] text-center min-w-[240px]">
-            <div className="flex items-center gap-2 justify-center mb-2">
-              <Users className="w-5 h-5 text-on-primary-container" />
-              <span className="font-black text-2xl">1,248</span>
-            </div>
-            <p className="text-[11px] uppercase font-bold opacity-60">Students Registered</p>
+            {liveTest.forms_url ? (
+              <a
+                href={liveTest.forms_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block bg-on-primary-container text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-lg shadow-on-primary-container/20"
+              >
+                Start Test Now →
+              </a>
+            ) : (
+              <div className="inline-flex items-center gap-3 bg-white/10 border border-white/20 px-6 py-3.5 rounded-xl text-white font-bold">
+                <Clock className="w-5 h-5 opacity-60" /> Test Not Started
+              </div>
+            )}
           </div>
         </section>
       ) : scheduledTests.length > 0 ? (
         <section className="relative overflow-hidden rounded-3xl bg-on-secondary-fixed text-white p-8 md:p-12 shadow-2xl">
-          <div className="inline-flex items-center gap-2 bg-on-primary-container px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
-            <Clock className="w-3.5 h-3.5" /> Next Live Assessment
+          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
+            <Clock className="w-3.5 h-3.5" /> Test Not Started Yet
           </div>
           <h1 className="text-4xl font-headline font-extrabold mb-4">{scheduledTests[0].title}</h1>
           <p className="text-lg opacity-80 mb-6">{scheduledTests[0].duration_min} mins · {scheduledTests[0].subject}</p>
-          <button className="bg-white/10 border border-white/20 px-8 py-3 rounded-xl font-bold hover:bg-white/20 transition-all">Join Waiting Room</button>
+          <div className="inline-flex items-center gap-3 bg-white/10 border border-white/20 px-6 py-3.5 rounded-xl text-white font-bold">
+            <Clock className="w-5 h-5 opacity-60" /> Waiting for test to go live...
+          </div>
         </section>
       ) : null}
+
 
       {/* ── Upcoming Tests ────────────────────────────────────── */}
       {scheduledTests.length > 0 && (

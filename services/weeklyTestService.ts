@@ -9,6 +9,7 @@ export interface WeeklyTest {
   scheduled_at: string | null; question_count: number; total_questions: number
   questions?: Question[]; created_at: string; my_score?: number; my_rank?: number
   review_questions?: ReviewQuestion[]
+  forms_url?: string
 }
 export interface Question {
   id: number; text: string; options: string[]; answer_index: number

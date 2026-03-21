@@ -1,12 +1,10 @@
 'use client'
 // Student Study Materials — fetches real data from resourceService
 import { useEffect, useState, useMemo } from 'react'
-import { Search, BookOpen, Video, FileText, Eye, X, Loader2, Globe, FileArchive, Headphones } from 'lucide-react'
+import { Search, BookOpen, Video, FileText, Eye, X, Loader2, Globe, FileArchive } from 'lucide-react'
 import { resourceService, type Resource } from '@/services/resourceService'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
-
-const SECTION_TABS = ['All', 'Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'College Model Questions', 'Extra Study Materials']
 
 const formatBadge: Record<string, string> = {
   pdf:   'bg-red-100 text-red-600',
@@ -27,12 +25,24 @@ const formatLabel: Record<string, string> = {
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
+  const [subjects,  setSubjects]  = useState<string[]>([])
   const [loading,   setLoading]   = useState(true)
   const [query,     setQuery]     = useState('')
   const [section,   setSection]   = useState('All')
 
+  // Load distinct subjects from API
   useEffect(() => {
-    resourceService.getResources({ section: section === 'All' ? '' : section, search: query })
+    resourceService.getSubjects()
+      .then((res) => {
+        const subs = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
+        setSubjects(subs)
+      })
+      .catch(() => {}) // graceful fail
+  }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    resourceService.getResources({ subject: section === 'All' ? '' : section, search: query })
       .then((res) => {
         const d = res.data
         setResources(Array.isArray(d) ? d : (d as { items?: Resource[] }).items ?? [])
@@ -49,11 +59,13 @@ export default function ResourcesPage() {
     })
   }, [resources, query])
 
+  const tabs = ['All', ...subjects]
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <div className="mb-8">
         <h2 className="font-headline font-black text-4xl text-[#1a1a4e] tracking-tight mb-2">Study Materials</h2>
-        <p className="text-on-surface-variant font-medium">BridgeCourse Nepal — curated PDFs, videos, and notes for IOE/IOM/CSIT prep.</p>
+        <p className="text-on-surface-variant font-medium">BridgeCourse Nepal — curated PDFs, videos, and notes.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] p-5 mb-8 space-y-4">
@@ -65,7 +77,7 @@ export default function ResourcesPage() {
           {query && <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-on-surface"><X className="w-5 h-5" /></button>}
         </div>
         <div className="flex flex-wrap gap-2">
-          {SECTION_TABS.map((s) => (
+          {tabs.map((s) => (
             <button key={s} onClick={() => setSection(s)} className={cn(
               'px-4 py-1.5 rounded-full text-sm font-bold transition-all whitespace-nowrap',
               section === s ? 'bg-on-primary-container text-white' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'

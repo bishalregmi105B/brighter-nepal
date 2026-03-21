@@ -1,9 +1,9 @@
 'use client'
 // Admin User Management — full admin view with inline editing, WhatsApp, joined_method, auto-password visibility
 import { useEffect, useState, useCallback } from 'react'
-import { Download, UserPlus, ChevronLeft, ChevronRight, Search, X, Loader2, Phone, ShieldCheck, Pencil, Check, MessageSquare } from 'lucide-react'
+import { Download, UserPlus, ChevronLeft, ChevronRight, Search, X, Loader2, Phone, ShieldCheck, Pencil, Check, MessageSquare, DollarSign, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
-import { userService, type User } from '@/services/userService'
+import { userService, type User, type ContactMethod } from '@/services/userService'
 import { cn } from '@/lib/utils/cn'
 
 type Tab = 'trial' | 'paid'
@@ -64,31 +64,72 @@ function ShiftModal({ user, onClose, onSuccess }: { user: User; onClose: () => v
 }
 
 // ─── Inline Edit Row ──────────────────────────────────────────────────────────
-function EditRow({ user, onSave, onCancel }: { user: User; onSave: (data: Partial<User>) => Promise<void>; onCancel: () => void }) {
-  const [whatsapp,    setWhatsapp]    = useState(user.whatsapp ?? '')
+function EditRow({
+  user, contactMethods, onSave, onCancel,
+}: {
+  user: User
+  contactMethods: ContactMethod[]
+  onSave: (data: Partial<User> & { paid_amount?: number }) => Promise<void>
+  onCancel: () => void
+}) {
+  const [whatsapp,     setWhatsapp]     = useState(user.whatsapp ?? '')
   const [joinedMethod, setJoinedMethod] = useState(user.joined_method ?? '')
-  const [saving,      setSaving]      = useState(false)
+  const [paidAmount,   setPaidAmount]   = useState(String(user.paid_amount ?? ''))
+  const [saving,       setSaving]       = useState(false)
 
   const save = async () => {
     setSaving(true)
-    await onSave({ whatsapp, joined_method: joinedMethod })
+    const payload: Partial<User> & { paid_amount?: number } = { whatsapp, joined_method: joinedMethod }
+    if (paidAmount) payload.paid_amount = parseInt(paidAmount, 10)
+    await onSave(payload)
     setSaving(false)
+  }
+
+  const CHANNEL_ICONS: Record<string, string> = {
+    whatsapp: '📱', messenger: '💬', facebook: '👥', other: '🔗',
   }
 
   return (
     <tr className="bg-blue-50/50">
       <td colSpan={9} className="px-4 py-4">
         <div className="flex flex-wrap gap-4 items-end">
+          {/* WhatsApp */}
           <div>
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">WhatsApp Number</label>
             <input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="98XXXXXXXX"
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20" />
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20" />
           </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Joined Method / Contact Note</label>
-            <input value={joinedMethod} onChange={e => setJoinedMethod(e.target.value)} placeholder="e.g. WhatsApp referral, Facebook ad..."
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20" />
+
+          {/* Joined Via — dropdown from ContactMethod table */}
+          <div className="min-w-[180px]">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Joined Via</label>
+            <select
+              value={joinedMethod}
+              onChange={e => setJoinedMethod(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20"
+            >
+              <option value="">— not set —</option>
+              {contactMethods.map(m => (
+                <option key={m.id} value={m.name}>
+                  {CHANNEL_ICONS[m.channel] ?? '🔗'} {m.name}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {/* Paid Amount */}
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Paid Amount (NPR)</label>
+            <input
+              type="number"
+              value={paidAmount}
+              onChange={e => setPaidAmount(e.target.value)}
+              placeholder="e.g. 8500"
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20"
+            />
+          </div>
+
+          {/* Buttons */}
           <div className="flex gap-2">
             <button onClick={save} disabled={saving} className="px-4 py-2 bg-[#1a1a4e] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-[#141432]">
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
@@ -115,6 +156,7 @@ export default function UserManagementPage() {
   const [stats,    setStats]    = useState({ total_users: 0, paid_users: 0, trial_users: 0, total_payment: 0, today_payment: 0 })
   const [shifting, setShifting] = useState<User | null>(null)
   const [editing,  setEditing]  = useState<number | null>(null)
+  const [contactMethods, setContactMethods] = useState<ContactMethod[]>([])
 
   const loadStats = useCallback(() => {
     userService.getStats().then(r => setStats(r.data as typeof stats)).catch(() => {})
@@ -129,6 +171,11 @@ export default function UserManagementPage() {
 
   useEffect(() => { loadStats() }, [loadStats])
   useEffect(() => { fetchUsers(tab, query, page) }, [tab, query, page, fetchUsers])
+  useEffect(() => {
+    userService.getContactMethods()
+      .then(r => { const d = r.data; setContactMethods(Array.isArray(d) ? d : (d as { data?: ContactMethod[] })?.data ?? []) })
+      .catch(() => {})
+  }, [])
 
   const totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE))
   const changeTab  = (t: Tab) => { setTab(t); setPage(1); setEditing(null) }
@@ -138,7 +185,7 @@ export default function UserManagementPage() {
     fetchUsers(tab, query, page)
   }
 
-  const saveEdit = async (u: User, data: Partial<User>) => {
+  const saveEdit = async (u: User, data: Partial<User> & { paid_amount?: number }) => {
     await userService.updateUser(u.id, data)
     fetchUsers(tab, query, page)
     setEditing(null)
@@ -217,7 +264,7 @@ export default function UserManagementPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-surface-container-low/50">
-                  {['ID', 'Name / Password', 'Email', 'WhatsApp', 'Joined Via', 'Joined', 'Plan / Amount', 'Status', 'Actions'].map(col => (
+                  {['ID', 'Name / Password', 'Email', 'WhatsApp', 'Joined Via', 'Joined', 'Paid', 'Status', 'Actions'].map(col => (
                     <th key={col} className="px-4 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest border-b border-surface-container whitespace-nowrap">{col}</th>
                   ))}
                 </tr>
@@ -271,14 +318,17 @@ export default function UserManagementPage() {
                     </td>
                     {/* Joined date */}
                     <td className="px-4 py-4 text-sm text-on-surface-variant whitespace-nowrap">{u.created_at?.slice(0, 10)}</td>
-                    {/* Plan + paid amount */}
+                    {/* Paid amount */}
                     <td className="px-4 py-4">
-                      <span className={cn('px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider',
-                        u.plan === 'paid' ? 'bg-orange-50 text-on-primary-container' : 'bg-secondary/10 text-secondary')}>
-                        {u.plan === 'paid' ? 'Premium' : '7-Day Trial'}
-                      </span>
-                      {u.paid_amount && (
-                        <p className="text-[11px] text-green-600 font-bold mt-1">NPR {u.paid_amount.toLocaleString()}</p>
+                      {u.paid_amount ? (
+                        <div>
+                          <p className="font-bold text-sm text-green-700">NPR {u.paid_amount.toLocaleString()}</p>
+                          <span className="text-[10px] font-black text-on-primary-container bg-orange-50 px-2 py-0.5 rounded-full">PAID</span>
+                        </div>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-secondary/10 text-secondary">
+                          7-Day Trial
+                        </span>
                       )}
                     </td>
                     {/* Status toggle */}
@@ -311,6 +361,7 @@ export default function UserManagementPage() {
                   // Inline edit row
                   editing === u.id && (
                     <EditRow key={`edit-${u.id}`} user={u}
+                      contactMethods={contactMethods}
                       onSave={data => saveEdit(u, data)}
                       onCancel={() => setEditing(null)} />
                   ),
