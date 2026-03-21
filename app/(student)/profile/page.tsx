@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { User, MapPin, Mail, Lock, Bell, CreditCard, Camera, Loader2 } from 'lucide-react'
 import { authService, type AuthUser } from '@/services/authService'
 import { userService } from '@/services/userService'
+import { DeveloperWatermark } from '@/components/ui/DeveloperWatermark'
 
 export default function ProfilePage() {
   const [user,    setUser]    = useState<AuthUser | null>(null)
@@ -112,7 +113,7 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      {/* Notifications — static, UI only */}
+      {/* Notifications — static, UI only
       <div className="bg-white rounded-2xl p-6 shadow-[0_12px_32px_rgba(25,28,30,0.04)] space-y-5">
         <div className="flex items-center gap-3 mb-4">
           <Bell className="w-5 h-5 text-on-primary-container" />
@@ -137,6 +138,7 @@ export default function ProfilePage() {
           ))}
         </div>
       </div>
+      */}
 
       {/* Plan */}
       <div className="bg-[#1a1a4e] rounded-2xl p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6">
@@ -154,6 +156,11 @@ export default function ProfilePage() {
         <button className="bg-on-primary-container text-white px-8 py-3 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-on-primary-container/20 flex-shrink-0">
           {user?.plan === 'paid' ? 'Manage Subscription' : 'Upgrade Now'}
         </button>
+      </div>
+
+      {/* Developer Watermark */}
+      <div className="mt-8 pt-8 border-t border-surface-container">
+        <DeveloperWatermark variant="page" />
       </div>
     </div>
   )

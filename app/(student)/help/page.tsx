@@ -1,6 +1,7 @@
 // Help Center Page
 // FAQ accordion + contact support options
 import { HelpCircle, MessageSquare, Mail, Phone, BookOpen, ChevronDown } from 'lucide-react'
+import { DeveloperWatermark } from '@/components/ui/DeveloperWatermark'
 
 const faqs = [
   {
@@ -95,6 +96,11 @@ export default function HelpPage() {
       <p className="text-center text-xs text-outline pb-4">
         Average response time: under 2 hours · We&apos;re here Mon–Sat, 8 AM – 8 PM NST
       </p>
+
+      {/* Developer Watermark */}
+      <div className="pt-8 border-t border-surface-container">
+        <DeveloperWatermark variant="page" />
+      </div>
     </div>
   )
 }

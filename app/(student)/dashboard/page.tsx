@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookOpen, Bell, Flame, BarChart2, Loader2 } from 'lucide-react'
-import { dashboardService, type DashboardData } from '@/services/dashboardService'
+import { dashboardService, DashboardData } from '@/services/dashboardService'
+import { DeveloperWatermark } from '@/components/ui/DeveloperWatermark'
 import { authService, type AuthUser } from '@/services/authService'
 import { noticeService, type Notice } from '@/services/noticeService'
 import { formatDate } from '@/lib/utils/formatDate'
@@ -200,6 +201,11 @@ export default function StudentDashboardPage() {
             })}
           </div>
         </div>
+      </div>
+
+      {/* Developer Watermark */}
+      <div className="mt-8 pt-8 border-t border-surface-container">
+        <DeveloperWatermark variant="page" />
       </div>
     </div>
   )

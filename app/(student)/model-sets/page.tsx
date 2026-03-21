@@ -2,9 +2,10 @@
 // Student Model Sets — fetches real data from modelSetService
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Target, ChevronDown, Play, Eye, Lock, Timer, BookCheck, Loader2 } from 'lucide-react'
+import { Search, Flame, BookCheck, Timer, Play, ChevronDown, CheckCircle2, Target, Loader2, Lock, Eye } from 'lucide-react'
 import { modelSetService, type ModelSet } from '@/services/modelSetService'
 import { cn } from '@/lib/utils/cn'
+import { DeveloperWatermark } from '@/components/ui/DeveloperWatermark'
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard'
 const SORT_OPTIONS = ['Newest First', 'Difficulty (Low → High)']
@@ -162,6 +163,11 @@ export default function ModelSetsPage() {
           <ChevronDown className="w-5 h-5 text-slate-400 group-hover:translate-y-1 transition-transform" />
         </button>
         <p className="text-xs text-slate-400 font-medium">Showing {displayed.length} sets</p>
+      </div>
+
+      {/* Developer Watermark */}
+      <div className="mt-12 pt-8 border-t border-surface-container">
+        <DeveloperWatermark variant="page" />
       </div>
     </div>
   )
