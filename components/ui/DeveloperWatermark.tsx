@@ -24,8 +24,8 @@ export function DeveloperWatermark({ isCollapsed = false, className, variant = '
             <Info className="w-5 h-5 text-[#1a1a4e] group-hover:text-[#c0622f]" />
           </div>
           <div>
-            <p className="text-sm font-bold text-[#1a1a4e]">Developed and Maintained by Ashlya</p>
-            <p className="text-xs text-slate-500 font-medium">Click to learn more about the developers behind BridgeCourse Nepal.</p>
+            <p className="text-sm font-bold text-[#1a1a4e]">Platform by Ashlya for Brighter Nepal</p>
+            <p className="text-xs text-slate-500 font-medium">Owned by Brighter Nepal • IT Development by Ashlya</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container text-xs font-bold text-[#1a1a4e] group-hover:bg-[#c0622f] group-hover:text-white transition-colors">
@@ -48,7 +48,7 @@ export function DeveloperWatermark({ isCollapsed = false, className, variant = '
         title="Developed and maintained by Ashlya"
       >
         <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center flex-shrink-0 font-serif italic">i</div>
-        {!isCollapsed && <span>Developed by Ashlya</span>}
+        {!isCollapsed && <span>IT Development by Ashlya</span>}
       </a>
     </div>
   )
