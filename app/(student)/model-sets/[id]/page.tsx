@@ -52,7 +52,6 @@ export default function ExamPage() {
     if (store.exam?.id === params.id) { setExam(store.exam); setLoading(false); return }
     modelSetService.getModelSet(Number(params.id)).then((res) => {
       const built = buildExamFromModelSet(res.data as Parameters<typeof buildExamFromModelSet>[0])
-      if (built.questions.length === 0) { router.push('/model-sets'); return }
       store.startExam(built, built.duration)
       setExam(built)
     }).finally(() => setLoading(false))
@@ -73,7 +72,19 @@ export default function ExamPage() {
   const currentSession  = store.sessions[currentQuestion?.id]
   const totalAnswered   = Object.values(store.sessions).filter(s => s.selectedId).length
   const subjects        = Array.from(new Set(exam.questions.map(q => q.subject)))
-  const [activeSubject, setActiveSubject] = useState(subjects[0])
+  const [activeSubject, setActiveSubject] = useState(subjects[0] ?? 'General')
+
+  if (exam.questions.length === 0) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#f8f9fb]">
+        <h2 className="text-2xl font-bold text-[#1a1a4e] mb-2">No Questions Available</h2>
+        <p className="text-slate-500 mb-6 text-center max-w-md">This model set is currently being prepared and has no questions yet. Please check back later.</p>
+        <button onClick={() => router.push('/model-sets')} className="px-6 py-2 bg-[#c0622f] text-white rounded-xl font-bold hover:bg-[#a14f24] transition-colors">
+          Back to Model Sets
+        </button>
+      </div>
+    )
+  }
 
   if (!currentQuestion) return null
 

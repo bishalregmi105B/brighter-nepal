@@ -1,8 +1,8 @@
 'use client'
 // Student Live Class Room — fetches real class data and group messages for chat
 import { useEffect, useState, useRef } from 'react'
-import { useParams } from 'next/navigation'
-import { Users, Hand, MessageSquare, Maximize2, Play, Pause, Volume2, Settings, Send, Loader2 } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { Users, Hand, MessageSquare, Maximize2, Play, Pause, Volume2, Settings, Send, Loader2, ArrowLeft } from 'lucide-react'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
 import { groupService, type GroupMessage } from '@/services/groupService'
 import { cn } from '@/lib/utils/cn'
@@ -10,6 +10,7 @@ import { SecureVideoPlayer } from '@/components/media/SecureVideoPlayer'
 
 export default function LiveClassRoomPage() {
   const params       = useParams<{ id: string }>()
+  const router       = useRouter()
   const [cls,        setCls]       = useState<LiveClass | null>(null)
   const [messages,   setMessages]  = useState<GroupMessage[]>([])
   const [input,      setInput]     = useState('')
@@ -53,10 +54,11 @@ export default function LiveClassRoomPage() {
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-[#0d0d1a] overflow-hidden">
-      {/* Video Panel */}
-      <div className="flex-1 flex flex-col bg-black/90">
-        <div className="flex items-center justify-between px-5 py-3 bg-[#1a1a4e]">
-          <div className="flex items-center gap-3">
+      {/* Video Side (left on desktop, top on mobile) */}
+      <div className="flex flex-col w-full md:flex-1 min-w-0">
+        <div className="h-16 md:h-18 px-4 flex items-center justify-between border-b border-surface-container/10 bg-[#0d0d2b] flex-shrink-0 z-20">
+          <div className="flex items-center gap-4">
+            <button className="md:hidden text-white/70" onClick={() => router.back()}><ArrowLeft className="w-5 h-5"/></button>
             <span className="flex items-center gap-1.5 bg-error/90 px-2.5 py-1 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               <span className="text-white text-[10px] font-black tracking-widest uppercase">Live</span>
@@ -72,7 +74,7 @@ export default function LiveClassRoomPage() {
           </div>
         </div>
 
-        <div className="flex-1 relative bg-black flex items-center justify-center min-h-0">
+        <div className="w-full aspect-video md:flex-1 md:h-full bg-black flex items-center justify-center min-h-0 relative">
           <SecureVideoPlayer
             videoUrl={cls?.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
             title={cls?.title}
@@ -82,7 +84,7 @@ export default function LiveClassRoomPage() {
       </div>
 
       {/* Chat Panel */}
-      <div className="w-full md:w-80 flex flex-col bg-white border-l border-slate-200/10 h-64 md:h-auto">
+      <div className="w-full flex-1 md:flex-none md:w-80 flex flex-col bg-white border-l border-slate-200/10 min-h-0">
         <div className="flex border-b border-surface-container bg-surface-container-low flex-shrink-0">
           {[{ id: 'chat', label: 'Live Chat' }, { id: 'qa', label: 'Q&A' }].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as 'chat' | 'qa')} className={cn(

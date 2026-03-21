@@ -32,10 +32,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   return (
     <AuthGuard requiredRole="student">
       <div className="flex min-h-screen bg-surface">
-        {/* Sidebar — hidden on mobile (<768px), shown on md+ */}
-        <div className="hidden md:block">
-          <StudentSidebar />
-        </div>
+        {/* Sidebar — desktop/tablet/mobile handling is inside the component */}
+        <StudentSidebar />
 
         {/* Main content */}
         <div

@@ -25,9 +25,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AuthGuard requiredRole="admin">
       <div className="flex min-h-screen bg-surface">
-        <div className="hidden md:block">
-          <AdminSidebar />
-        </div>
+        {/* Sidebar — handling mobile slide-in inherently */}
+        <AdminSidebar />
         <div
           className="flex flex-col flex-1 min-w-0 transition-all duration-300"
           style={{

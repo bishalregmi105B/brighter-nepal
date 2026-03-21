@@ -58,12 +58,10 @@ export function SecureVideoPlayer({
     let isMounted = true;
 
     // Load CSS
-    if (!document.querySelector('link[href="/csPlayer.css"]')) {
       const cssLink = document.createElement('link')
       cssLink.rel = 'stylesheet'
-      cssLink.href = '/csPlayer.css'
+      cssLink.href = '/csPlayer.css?v=' + Date.now()
       document.head.appendChild(cssLink)
-    }
 
     const onReady = () => {
       if (isMounted && window.YT && window.YT.Player && window.csPlayer) {

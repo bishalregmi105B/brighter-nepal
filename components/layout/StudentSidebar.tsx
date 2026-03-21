@@ -12,17 +12,30 @@ import { useAuth } from '@/hooks/useAuth'
 export function StudentSidebar() {
   const pathname    = usePathname()
   const router      = useRouter()
-  const { isCollapsed, toggle } = useSidebarStore()
+  const { isCollapsed, toggle, isMobileOpen, closeMobile } = useSidebarStore()
   const { user, logout } = useAuth()
 
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 h-screen z-50 bg-[#f8f9fb] flex flex-col py-6 gap-2',
-        'border-r border-outline-variant/20 transition-all duration-300',
-        isCollapsed ? 'w-[72px]' : 'w-[260px]'
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm" 
+          onClick={closeMobile} 
+        />
       )}
-    >
+      
+      <aside
+        className={cn(
+          'fixed left-0 top-0 h-screen z-50 bg-[#f8f9fb] flex flex-col py-6 gap-2',
+          'border-r border-outline-variant/20 transition-all duration-300',
+          // Desktop behavior
+          !isMobileOpen && (isCollapsed ? 'md:w-[72px]' : 'md:w-[260px]'),
+          // Mobile behavior: slide in/out
+          'w-[260px]',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        )}
+      >
       {/* Logo */}
       <div className={cn('flex items-center gap-3 mb-6 transition-all', isCollapsed ? 'px-4 justify-center' : 'px-6')}>
         <div className="w-9 h-9 rounded-lg bg-[#1a1a4e] flex items-center justify-center flex-shrink-0">
@@ -56,18 +69,21 @@ export function StudentSidebar() {
                 isActive
                   ? 'bg-white text-[#c0622f] shadow-sm'
                   : 'text-slate-600 hover:bg-slate-200/50 hover:translate-x-1',
-                isCollapsed && 'justify-center px-2'
+                isCollapsed && 'justify-center px-2 md:justify-center'
               )}
+              onClick={() => {
+                if (window.innerWidth < 768) closeMobile()
+              }}
             >
               <Icon className={cn('w-5 h-5 flex-shrink-0', isActive ? 'text-[#c0622f]' : 'text-slate-500 group-hover:text-[#1a1a4e]')} />
-              {!isCollapsed && <span>{item.label}</span>}
+              <span className={cn(isCollapsed ? 'md:hidden' : 'block')}>{item.label}</span>
             </Link>
           )
         })}
       </nav>
 
       {/* Bottom section */}
-      {!isCollapsed && (
+      <div className={cn('transition-opacity duration-200', isCollapsed ? 'md:hidden' : 'block')}>
         <div className="px-4 mt-2">
           <div className="bg-primary-container/10 p-4 rounded-xl mb-4">
             {user?.plan === 'paid' ? (
@@ -90,9 +106,7 @@ export function StudentSidebar() {
             )}
           </div>
         </div>
-      )}
-      
-      {!isCollapsed && (
+        
         <div className="px-3 flex flex-col gap-1">
           <Link href="/help" className="flex items-center gap-3 px-3 py-2 text-slate-500 text-xs font-semibold hover:text-on-surface rounded-lg hover:bg-slate-100 transition-colors">
             <HelpCircle className="w-4 h-4" />
@@ -105,12 +119,13 @@ export function StudentSidebar() {
             <span>Logout</span>
           </button>
         </div>
-      )}
+      </div>
 
-      {/* Toggle button */}
+      {/* Toggle button (Desktop only) */}
       <button
         onClick={toggle}
         className={cn(
+          'hidden md:flex',
           'absolute top-[72px] -right-3 z-10',
           'w-6 h-6 rounded-full bg-white border border-outline-variant/30 shadow-sm',
           'flex items-center justify-center text-on-surface-variant',
@@ -124,5 +139,6 @@ export function StudentSidebar() {
         }
       </button>
     </aside>
+    </>
   )
 }

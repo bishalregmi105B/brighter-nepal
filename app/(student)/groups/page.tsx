@@ -17,6 +17,11 @@ export default function GroupsPage() {
   const [preview,  setPreview]  = useState<string | null>(null)
   const [sending,  setSending]  = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   useEffect(() => {
     authService.getMe().then((u) => setUser(u)).catch(() => {})
@@ -29,6 +34,17 @@ export default function GroupsPage() {
       }).finally(() => setLoading(false))
     }).catch(() => setLoading(false))
   }, [])
+
+  // Poll for new messages every 5 seconds
+  useEffect(() => {
+    if (!group) return
+    const interval = setInterval(() => {
+      groupService.getGroupMessages(group.id).then((msgRes) => {
+        setMessages(msgRes.data?.items ?? [])
+      })
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [group])
 
   const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -115,6 +131,7 @@ export default function GroupsPage() {
               </div>
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Compose */}

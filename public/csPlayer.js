@@ -98,6 +98,15 @@ function $(selector,parent){
               .then(()=>{
                 parent.querySelector(".csPlayer-container iframe").addEventListener("load",()=>{ 
                   parent.querySelector(".csPlayer-container span i").classList.remove("csPlayer-loading");
+                  
+                  // Make the entire thumbnail overlay clickable to support mobile playback startup
+                  var overlaySpan = parent.querySelector(".csPlayer-container span");
+                  overlaySpan.style.pointerEvents = "auto";
+                  overlaySpan.style.cursor = "pointer";
+                  overlaySpan.addEventListener("click", () => {
+                      csPlayer.csPlayers[videoTag]["videoTag"].playVideo();
+                  });
+                  
                   csPlayer.csPlayers[videoTag]["videoTag"].addEventListener('onStateChange', onPlayerStateChange);
                   parent.querySelector(".csPlayer-controls-box main i:nth-of-type(1)").addEventListener("click", backward);
                   parent.querySelector(".csPlayer-controls-box main i:nth-of-type(2)").addEventListener("click", togglePlayPause);

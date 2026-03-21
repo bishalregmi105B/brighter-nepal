@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth'
 export function AdminSidebar() {
   const pathname    = usePathname()
   const router      = useRouter()
-  const { isCollapsed, toggle } = useSidebarStore()
+  const { isCollapsed, toggle, isMobileOpen, closeMobile } = useSidebarStore()
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({})
   const { logout } = useAuth()
 
@@ -22,13 +22,24 @@ export function AdminSidebar() {
   }
 
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 h-screen z-50 bg-[#f8f9fb] flex flex-col py-6',
-        'border-r border-outline-variant/20 transition-all duration-300 overflow-hidden',
-        isCollapsed ? 'w-[72px]' : 'w-[260px]'
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm" 
+          onClick={closeMobile} 
+        />
       )}
-    >
+
+      <aside
+        className={cn(
+          'fixed left-0 top-0 h-screen z-50 bg-[#f8f9fb] flex flex-col py-6',
+          'border-r border-outline-variant/20 transition-all duration-300 overflow-hidden',
+          !isMobileOpen && (isCollapsed ? 'md:w-[72px]' : 'md:w-[260px]'),
+          'w-[260px]',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        )}
+      >
       {/* Logo */}
       <div className={cn('flex items-center gap-3 mb-8 transition-all', isCollapsed ? 'px-4 justify-center' : 'px-6')}>
         <div className="w-9 h-9 rounded-lg bg-[#1a1a4e] flex items-center justify-center flex-shrink-0">
@@ -62,6 +73,7 @@ export function AdminSidebar() {
                     toggleSubMenu(item.label)
                   } else {
                     window.location.href = item.href
+                    if (window.innerWidth < 768) closeMobile()
                   }
                 }}
                 className={cn(
@@ -137,11 +149,12 @@ export function AdminSidebar() {
       {/* Toggle */}
       <button
         onClick={toggle}
-        className="absolute top-[72px] -right-3 z-10 w-6 h-6 rounded-full bg-white border border-outline-variant/30 shadow-sm flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
+        className="hidden md:flex absolute top-[72px] -right-3 z-10 w-6 h-6 rounded-full bg-white border border-outline-variant/30 shadow-sm items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>
     </aside>
+    </>
   )
 }

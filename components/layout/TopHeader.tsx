@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import { useAuth } from '@/hooks/useAuth'
+import { useSidebarStore } from '@/lib/store/sidebarStore'
 
 interface TopHeaderProps {
   role:        'student' | 'admin'
@@ -15,6 +16,7 @@ interface TopHeaderProps {
 
 export function TopHeader({ role, pageTitle, showSearch = true }: TopHeaderProps) {
   const { user, loading, logout, initials } = useAuth()
+  const { toggleMobile } = useSidebarStore()
   const router = useRouter()
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -36,7 +38,15 @@ export function TopHeader({ role, pageTitle, showSearch = true }: TopHeaderProps
       {/* Main row */}
       <div className="flex items-center gap-3 px-4 md:px-8 py-3 md:py-4">
         {/* Left: Title or Search */}
-        <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+          <button
+            onClick={toggleMobile}
+            className="md:hidden p-1 -ml-1 text-slate-500 hover:text-[#c0622f] focus:outline-none"
+            title="Open Menu"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          
           {pageTitle && (
             <h2 className="font-headline font-bold text-lg md:text-xl tracking-tight text-[#1a1a4e] flex-shrink-0 truncate">
               {pageTitle}
