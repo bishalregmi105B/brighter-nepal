@@ -1,0 +1,42 @@
+import { api } from './api'
+import { forceLogout } from './api'
+
+export interface AuthUser {
+  id: number; name: string; email: string; plan: string; status: string; role: string
+  group_id?: number; device_count?: number; created_at?: string
+}
+export interface AuthResponse {
+  data: { token: string; user: AuthUser }
+}
+
+export const authService = {
+  async login(email: string, password: string): Promise<AuthResponse['data']> {
+    const res = await api.post<AuthResponse>('/api/auth/login', { email, password })
+    if (res.data?.token) {
+      localStorage.setItem('bn_token', res.data.token)
+      localStorage.setItem('bn_user', JSON.stringify(res.data.user))
+    }
+    return res.data
+  },
+
+  async signup(name: string, email: string, password: string): Promise<AuthResponse['data']> {
+    const res = await api.post<AuthResponse>('/api/auth/signup', { name, email, password })
+    if (res.data?.token) {
+      localStorage.setItem('bn_token', res.data.token)
+      localStorage.setItem('bn_user', JSON.stringify(res.data.user))
+    }
+    return res.data
+  },
+
+  async getMe(): Promise<AuthUser> {
+    const res = await api.get<{ data: AuthUser }>('/api/auth/me')
+    if (res.data) localStorage.setItem('bn_user', JSON.stringify(res.data))
+    return res.data
+  },
+
+  async logout(): Promise<void> {
+    try { await api.post('/api/auth/logout', {}) } catch {}
+    localStorage.removeItem('bn_token')
+    localStorage.removeItem('bn_user')
+  },
+}

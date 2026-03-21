@@ -1,11 +1,13 @@
 'use client'
-// Signup Page — based exactly on sign_up_page/code.html
-// Same split layout as login. Fields: Full Name, Email, Phone, Password, Confirm Password, Terms
+// Signup Page — wired to real Flask API via authService
 import Link from 'next/link'
-import { School, User, Mail, Phone, Lock, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { School, User, Mail, Phone, Lock, ArrowRight, AlertCircle } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { authService } from '@/services/authService'
 import { cn } from '@/lib/utils/cn'
 
 const signupSchema = z.object({
@@ -22,14 +24,20 @@ const signupSchema = z.object({
 type SignupForm = z.infer<typeof signupSchema>
 
 export default function SignupPage() {
+  const router = useRouter()
+  const [apiError, setApiError] = useState('')
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
   })
 
   const onSubmit = async (data: SignupForm) => {
-    await new Promise((r) => setTimeout(r, 1000))
-    // TODO: create account + redirect to /onboarding
-    console.log(data)
+    setApiError('')
+    try {
+      await authService.signup(data.fullName, data.email, data.password)
+      router.push('/onboarding')
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : 'Signup failed')
+    }
   }
 
   const inputClass = (hasError?: boolean) => cn(

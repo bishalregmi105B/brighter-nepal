@@ -1,13 +1,38 @@
-// Student Profile Page
-// Edit profile info, change password, notification preferences, plan status
-import { User, MapPin, Mail, Lock, Bell, CreditCard, Camera } from 'lucide-react'
-import { currentUser } from '@/lib/data/mockUsers'
+'use client'
+// Student Profile — loads real user data from authService.getMe()
+import { useEffect, useState } from 'react'
+import { User, MapPin, Mail, Lock, Bell, CreditCard, Camera, Loader2 } from 'lucide-react'
+import { authService, type AuthUser } from '@/services/authService'
+import { userService } from '@/services/userService'
 
 export default function ProfilePage() {
+  const [user,    setUser]    = useState<AuthUser | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [pwMsg,   setPwMsg]   = useState('')
+
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw,     setNewPw]     = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+
+  useEffect(() => {
+    authService.getMe().then((u) => setUser(u)).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const handleUpdatePassword = async () => {
+    if (!newPw || newPw !== confirmPw) { setPwMsg('Passwords do not match.'); return }
+    try {
+      if (user) await userService.updateUser(user.id, { password: newPw })
+      setPwMsg('Password updated successfully!')
+      setCurrentPw(''); setNewPw(''); setConfirmPw('')
+    } catch (e) {
+      setPwMsg('Failed to update password.')
+    }
+  }
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
+
   return (
     <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8">
-
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-headline font-extrabold text-[#1a1a4e]">Your Profile</h1>
         <p className="text-slate-500 font-medium mt-1">Manage your personal information and preferences</p>
@@ -24,20 +49,17 @@ export default function ProfilePage() {
           </button>
         </div>
         <div className="flex-1 text-center md:text-left">
-          <h2 className="text-2xl font-headline font-black text-[#1a1a4e]">{currentUser.name}</h2>
-          <p className="text-slate-500 mt-1">{currentUser.email}</p>
+          <h2 className="text-2xl font-headline font-black text-[#1a1a4e]">{user?.name ?? '—'}</h2>
+          <p className="text-slate-500 mt-1">{user?.email ?? '—'}</p>
           <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
             <span className="bg-tertiary-fixed text-on-tertiary-fixed-variant text-xs font-bold px-3 py-1 rounded-full">
-              {currentUser.plan === 'paid' ? 'Pro Plan' : 'Free Plan'}
+              {user?.plan === 'paid' ? 'Premium Plan' : 'Free Trial'}
             </span>
             <span className="bg-surface-container text-slate-600 text-xs font-bold px-3 py-1 rounded-full">
-              Rank #{currentUser.rank}
+              BridgeCourse Nepal
             </span>
           </div>
         </div>
-        <button className="flex-shrink-0 px-5 py-2 rounded-xl border border-outline-variant/20 text-sm font-bold text-on-surface hover:bg-surface-container transition-colors">
-          Save Changes
-        </button>
       </div>
 
       {/* Personal Info */}
@@ -48,20 +70,17 @@ export default function ProfilePage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {[
-            { label: 'Full Name',        value: currentUser.name,  type: 'text',  Icon: User    },
-            { label: 'Email Address',    value: currentUser.email, type: 'email', Icon: Mail    },
-            { label: 'Location',         value: 'Kathmandu, Nepal', type: 'text', Icon: MapPin  },
-            { label: 'Stream / Faculty', value: 'Science (+2)',    type: 'text',  Icon: null    },
+            { label: 'Full Name',        value: user?.name  ?? '',  type: 'text',  Icon: User    },
+            { label: 'Email Address',    value: user?.email ?? '',  type: 'email', Icon: Mail    },
+            { label: 'Location',         value: 'Kathmandu, Nepal', type: 'text',  Icon: MapPin  },
+            { label: 'Stream / Faculty', value: 'Science (+2)',     type: 'text',  Icon: null    },
           ].map(({ label, value, type, Icon }) => (
             <div key={label} className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant ml-1">{label}</label>
               <div className="relative">
                 {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-4 h-4" />}
-                <input
-                  type={type}
-                  defaultValue={value}
-                  className={`w-full py-3 bg-surface-container-high border-none rounded-lg focus:ring-2 focus:ring-on-primary-container/20 text-on-surface text-sm ${Icon ? 'pl-9 pr-4' : 'px-4'}`}
-                />
+                <input type={type} defaultValue={value}
+                  className={`w-full py-3 bg-surface-container-high border-none rounded-lg focus:ring-2 focus:ring-on-primary-container/20 text-on-surface text-sm ${Icon ? 'pl-9 pr-4' : 'px-4'}`} />
               </div>
             </div>
           ))}
@@ -74,24 +93,26 @@ export default function ProfilePage() {
           <Lock className="w-5 h-5 text-on-primary-container" />
           <h3 className="font-headline font-bold text-on-surface text-lg">Change Password</h3>
         </div>
+        {pwMsg && <p className={`text-sm font-medium px-4 py-2 rounded-xl ${pwMsg.includes('success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{pwMsg}</p>}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {['Current Password', 'New Password', 'Confirm New Password'].map((label) => (
+          {[
+            { label: 'Current Password', val: currentPw, set: setCurrentPw },
+            { label: 'New Password',     val: newPw,     set: setNewPw     },
+            { label: 'Confirm New',      val: confirmPw, set: setConfirmPw },
+          ].map(({ label, val, set }) => (
             <div key={label} className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant ml-1">{label}</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="w-full px-4 py-3 bg-surface-container-high border-none rounded-lg focus:ring-2 focus:ring-on-primary-container/20 text-on-surface placeholder:text-outline text-sm"
-              />
+              <input type="password" value={val} onChange={(e) => set(e.target.value)} placeholder="••••••••"
+                className="w-full px-4 py-3 bg-surface-container-high border-none rounded-lg focus:ring-2 focus:ring-on-primary-container/20 text-on-surface placeholder:text-outline text-sm" />
             </div>
           ))}
         </div>
-        <button className="bg-on-primary-container text-white px-8 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all">
+        <button onClick={handleUpdatePassword} className="bg-on-primary-container text-white px-8 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 active:scale-95 transition-all">
           Update Password
         </button>
       </div>
 
-      {/* Notifications */}
+      {/* Notifications — static, UI only */}
       <div className="bg-white rounded-2xl p-6 shadow-[0_12px_32px_rgba(25,28,30,0.04)] space-y-5">
         <div className="flex items-center gap-3 mb-4">
           <Bell className="w-5 h-5 text-on-primary-container" />
@@ -99,10 +120,10 @@ export default function ProfilePage() {
         </div>
         <div className="space-y-4">
           {[
-            { label: 'Live Class Reminders',      sub: 'Get notified 15 minutes before a class starts',  defaultOn: true  },
-            { label: 'Weekly Test Announcements', sub: 'Alerts when a new test is scheduled or opened',   defaultOn: true  },
-            { label: 'Result Releases',           sub: 'Know when your test results are published',       defaultOn: true  },
-            { label: 'Group Announcements',       sub: 'Admin messages from your study groups',           defaultOn: false },
+            { label: 'Live Class Reminders',       sub: 'Get notified 15 minutes before a class starts', defaultOn: true  },
+            { label: 'Weekly Test Announcements',  sub: 'Alerts when a new test is scheduled or opened', defaultOn: true  },
+            { label: 'Result Releases',            sub: 'Know when your test results are published',      defaultOn: true  },
+            { label: 'Group Announcements',        sub: 'Admin messages from your BridgeCourse batch',    defaultOn: false },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between p-4 bg-surface-container-low rounded-xl">
               <div>
@@ -124,16 +145,14 @@ export default function ProfilePage() {
             <CreditCard className="w-6 h-6 text-on-primary-container" />
           </div>
           <div>
-            <p className="font-black text-lg">
-              {currentUser.plan === 'paid' ? 'Pro Plan Active' : 'Upgrade to Pro'}
-            </p>
+            <p className="font-black text-lg">{user?.plan === 'paid' ? 'Premium Plan Active' : 'Upgrade to Premium'}</p>
             <p className="text-white/60 text-sm">
-              {currentUser.plan === 'paid' ? 'Renews Feb 12, 2025 · NPR 12,000/yr' : 'Unlock all model sets, live classes & premium groups'}
+              {user?.plan === 'paid' ? 'Full access to all IOE/IOM/CSIT mock sets, live classes & resources' : 'Unlock all BridgeCourse Nepal content'}
             </p>
           </div>
         </div>
         <button className="bg-on-primary-container text-white px-8 py-3 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-on-primary-container/20 flex-shrink-0">
-          {currentUser.plan === 'paid' ? 'Manage Subscription' : 'Upgrade Now'}
+          {user?.plan === 'paid' ? 'Manage Subscription' : 'Upgrade Now'}
         </button>
       </div>
     </div>

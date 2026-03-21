@@ -1,8 +1,10 @@
 'use client'
 // Admin Weekly Test Create — full form to schedule a new weekly test
 import { useState } from 'react'
-import { ArrowLeft, Plus, Trash2, Clock, BookOpen, CalendarDays } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Plus, Trash2, Clock, BookOpen, CalendarDays, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { weeklyTestService } from '@/services/weeklyTestService'
 import { cn } from '@/lib/utils/cn'
 
 const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'General']
@@ -10,11 +12,13 @@ const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', '
 interface Question { id: string; text: string; options: string[]; answer: number }
 
 export default function CreateWeeklyTestPage() {
+  const router = useRouter()
   const [title,     setTitle]     = useState('')
   const [subject,   setSubject]   = useState(SUBJECTS[0])
   const [duration,  setDuration]  = useState('60')
   const [schedDate, setSchedDate] = useState('')
   const [schedTime, setSchedTime] = useState('')
+  const [saving,    setSaving]    = useState(false)
   const [questions, setQuestions] = useState<Question[]>([
     { id: 'q1', text: '', options: ['', '', '', ''], answer: 0 },
   ])
@@ -156,11 +160,27 @@ export default function CreateWeeklyTestPage() {
         <Link href="/admin/weekly-tests" className="flex-1 py-3.5 rounded-xl border border-outline-variant/20 font-bold text-sm text-on-surface hover:bg-surface-container transition-colors text-center">
           Cancel
         </Link>
-        <button className="flex-1 py-3.5 bg-surface-container text-[#1a1a4e] font-bold text-sm rounded-xl hover:bg-surface-container-high transition-colors">
-          Save as Draft
+        <button disabled={saving} onClick={async () => {
+          setSaving(true)
+          try {
+            await weeklyTestService.createTest({ title, subject, duration_min: Number(duration), status: 'draft',
+              scheduled_at: schedDate && schedTime ? `${schedDate}T${schedTime}:00` : null,
+              questions: questions.map(q => ({ text: q.text, options: q.options, answer_index: q.answer })) as unknown as import('@/services/weeklyTestService').Question[] })
+            router.push('/admin/weekly-tests')
+          } catch { setSaving(false) }
+        }} className="flex-1 py-3.5 bg-surface-container text-[#1a1a4e] font-bold text-sm rounded-xl hover:bg-surface-container-high transition-colors disabled:opacity-50">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Save as Draft'}
         </button>
-        <button className="flex-1 py-3.5 bg-[#c0622f] text-white font-bold text-sm rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
-          Schedule Test
+        <button disabled={saving} onClick={async () => {
+          setSaving(true)
+          try {
+            await weeklyTestService.createTest({ title, subject, duration_min: Number(duration), status: 'upcoming',
+              scheduled_at: schedDate && schedTime ? `${schedDate}T${schedTime}:00` : null,
+              questions: questions.map(q => ({ text: q.text, options: q.options, answer_index: q.answer })) as unknown as import('@/services/weeklyTestService').Question[] })
+            router.push('/admin/weekly-tests')
+          } catch { setSaving(false) }
+        }} className="flex-1 py-3.5 bg-[#c0622f] text-white font-bold text-sm rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20 disabled:opacity-50">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Schedule Test'}
         </button>
       </div>
     </div>

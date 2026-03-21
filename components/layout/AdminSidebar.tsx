@@ -2,17 +2,20 @@
 // Component: AdminSidebar — Admin sidebar with expandable sub-menus
 // Based exactly on admin_panel_dashboard/code.html and user_management/code.html
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, ChevronDown, School, HelpCircle, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebarStore } from '@/lib/store/sidebarStore'
 import { adminNavItems } from '@/lib/constants/adminNavigation'
+import { useAuth } from '@/hooks/useAuth'
 
 export function AdminSidebar() {
   const pathname    = usePathname()
+  const router      = useRouter()
   const { isCollapsed, toggle } = useSidebarStore()
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({})
+  const { logout } = useAuth()
 
   const toggleSubMenu = (label: string) => {
     setOpenSubMenus((prev) => ({ ...prev, [label]: !prev[label] }))
@@ -122,7 +125,9 @@ export function AdminSidebar() {
             <Link href="/admin/settings" className="flex items-center gap-2 px-2 py-2 text-slate-500 text-xs font-semibold hover:text-on-surface rounded-lg">
               <HelpCircle className="w-4 h-4" /> Help Center
             </Link>
-            <button className="flex items-center gap-2 px-2 py-2 text-error text-xs font-semibold hover:bg-error/5 rounded-lg w-full">
+            <button
+              onClick={async () => { await logout(); router.replace('/login') }}
+              className="flex items-center gap-2 px-2 py-2 text-error text-xs font-semibold hover:bg-error/5 rounded-lg w-full">
               <LogOut className="w-4 h-4" /> Logout
             </button>
           </div>

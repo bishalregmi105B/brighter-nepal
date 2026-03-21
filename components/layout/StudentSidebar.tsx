@@ -2,16 +2,18 @@
 // Component: StudentSidebar — collapsible sidebar w/ smooth 260→72px transition
 // Based exactly on student_dashboard/code.html and student_resources/code.html designs
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, School, HelpCircle, LogOut, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebarStore } from '@/lib/store/sidebarStore'
 import { studentNavItems } from '@/lib/constants/navigation'
-import { currentUser } from '@/lib/data/mockUsers'
+import { useAuth } from '@/hooks/useAuth'
 
 export function StudentSidebar() {
   const pathname    = usePathname()
+  const router      = useRouter()
   const { isCollapsed, toggle } = useSidebarStore()
+  const { user, logout } = useAuth()
 
   return (
     <aside
@@ -68,7 +70,7 @@ export function StudentSidebar() {
       {!isCollapsed && (
         <div className="px-4 mt-2">
           <div className="bg-primary-container/10 p-4 rounded-xl mb-4">
-            {currentUser.plan === 'paid' ? (
+            {user?.plan === 'paid' ? (
               <>
                 <p className="text-xs font-bold text-on-primary-container mb-2">PRO PLAN ACTIVE</p>
                 <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
@@ -96,7 +98,9 @@ export function StudentSidebar() {
             <HelpCircle className="w-4 h-4" />
             <span>Help Center</span>
           </Link>
-          <button className="flex items-center gap-3 px-3 py-2 text-slate-500 text-xs font-semibold hover:text-error rounded-lg hover:bg-slate-100 transition-colors w-full">
+          <button
+            onClick={async () => { await logout(); router.replace('/login') }}
+            className="flex items-center gap-3 px-3 py-2 text-slate-500 text-xs font-semibold hover:text-error rounded-lg hover:bg-slate-100 transition-colors w-full">
             <LogOut className="w-4 h-4" />
             <span>Logout</span>
           </button>

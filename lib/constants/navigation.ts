@@ -18,12 +18,13 @@ export interface NavItem {
 }
 
 export const studentNavItems: NavItem[] = [
-  { href: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/resources',     label: 'Resources',    icon: BookOpen },
-  { href: '/live-classes',  label: 'Live Classes', icon: Video },
-  { href: '/model-sets',    label: 'Model Sets',   icon: FileText },
-  { href: '/weekly-tests',  label: 'Weekly Tests', icon: ClipboardList },
-  { href: '/notices',       label: 'Notices',      icon: Bell },
-  { href: '/groups',        label: 'Groups',       icon: Users },
-  { href: '/profile',       label: 'My Profile',   icon: User },
+  { href: '/dashboard',         label: 'Dashboard',       icon: LayoutDashboard },
+  { href: '/resources',         label: 'Study Materials', icon: BookOpen },
+  { href: '/recorded-lectures', label: 'Recorded Lectures', icon: Video },
+  { href: '/live-classes',      label: 'Live Classes',    icon: Video },
+  { href: '/model-sets',        label: 'Model Sets',      icon: FileText },
+  { href: '/weekly-tests',      label: 'Weekly Tests',    icon: ClipboardList },
+  { href: '/notices',           label: 'Notices',         icon: Bell },
+  { href: '/groups',            label: 'Groups',          icon: Users },
+  { href: '/profile',           label: 'My Profile',      icon: User },
 ]
