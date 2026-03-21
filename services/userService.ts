@@ -45,7 +45,7 @@ export const userService = {
   updateUser: (id: number, payload: Partial<User> & { admin_note?: string; password?: string; paid_amount?: number }) =>
     api.patch<{ data: User }>(`/api/users/${id}`, payload),
   deleteUser: (id: number) => api.delete(`/api/users/${id}`),
-  bulkCreate: (users: { name: string; email: string; password?: string; plan?: string; whatsapp?: string }[]) =>
+  bulkCreate: (users: { name: string; email?: string; password?: string; plan?: string; whatsapp?: string }[]) =>
     api.post('/api/users/bulk', { users }),
   getStats: () =>
     api.get<{ data: UserStats }>('/api/users/stats'),
