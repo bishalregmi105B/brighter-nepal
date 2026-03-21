@@ -16,10 +16,10 @@ type Tab = 'video' | 'resources'
 
 const subjectColors: Record<string, string> = {
   Mathematics: 'bg-blue-100 text-blue-700',
-  Physics:     'bg-teal-100 text-teal-700',
-  Chemistry:   'bg-purple-100 text-purple-700',
-  Biology:     'bg-green-100 text-green-700',
-  English:     'bg-orange-100 text-orange-700',
+  Physics: 'bg-teal-100 text-teal-700',
+  Chemistry: 'bg-purple-100 text-purple-700',
+  Biology: 'bg-green-100 text-green-700',
+  English: 'bg-orange-100 text-orange-700',
 }
 
 const formatIcon = (fmt: string) => {
@@ -28,14 +28,14 @@ const formatIcon = (fmt: string) => {
 }
 
 export default function RecordedLectureVideoPage() {
-  const params      = useParams<{ id: string }>()
+  const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
-  const [lecture,   setLecture]   = useState<LiveClass | null>(null)
+  const [lecture, setLecture] = useState<LiveClass | null>(null)
   const [resources, setResources] = useState<Resource[]>([])
-  const [loading,   setLoading]   = useState(true)
+  const [loading, setLoading] = useState(true)
   const [resLoading, setResLoading] = useState(false)
-  const [playing,   setPlaying]   = useState(false)
-  const [tab,       setTab]       = useState<Tab>(() =>
+  const [playing, setPlaying] = useState(false)
+  const [tab, setTab] = useState<Tab>(() =>
     searchParams.get('tab') === 'resources' ? 'resources' : 'video'
   )
 
@@ -51,7 +51,10 @@ export default function RecordedLectureVideoPage() {
     if (!params.id) return
     setResLoading(true)
     resourceService.getResources({ live_class_id: Number(params.id) })
-      .then(res => setResources(res.data?.items ?? []))
+      .then((res) => {
+        const d = res.data
+        setResources(Array.isArray(d) ? d : (d as { items?: Resource[] }).items ?? [])
+      })
       .finally(() => setResLoading(false))
   }, [params.id])
 
@@ -123,7 +126,7 @@ export default function RecordedLectureVideoPage() {
         {/* Tabs */}
         <div className="flex gap-1 px-6 pt-5 border-b border-surface-container">
           {([
-            { key: 'video',     label: 'Details',   icon: <Film className="w-4 h-4" /> },
+            { key: 'video', label: 'Details', icon: <Film className="w-4 h-4" /> },
             { key: 'resources', label: `Resources${resources.length > 0 ? ` (${resources.length})` : ''}`, icon: <BookOpen className="w-4 h-4" /> },
           ] as { key: Tab; label: string; icon: React.ReactNode }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} className={cn(
@@ -143,8 +146,8 @@ export default function RecordedLectureVideoPage() {
             <div className="space-y-6 text-[#1a1a4e]">
               <div className="flex flex-wrap items-center gap-3">
                 <span className={cn('px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest', badgeClass)}>{lecture.subject}</span>
-                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Clock className="w-4 h-4"/> {lecture.duration_min} mins</span>
-                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Calendar className="w-4 h-4"/> Recorded on {scheduledDate}</span>
+                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Clock className="w-4 h-4" /> {lecture.duration_min} mins</span>
+                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Recorded on {scheduledDate}</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-headline font-bold leading-tight">{lecture.title}</h1>
               <div className="flex items-center gap-4 pt-2">
