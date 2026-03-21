@@ -1,63 +1,169 @@
 'use client'
-// Admin User Management — fetches real data from userService
-import { useEffect, useState, useMemo } from 'react'
-import { Download, UserPlus, MoreVertical, ChevronLeft, ChevronRight, Search, X, Loader2 } from 'lucide-react'
+// Admin User Management — full admin view with inline editing, WhatsApp, joined_method, auto-password visibility
+import { useEffect, useState, useCallback } from 'react'
+import { Download, UserPlus, ChevronLeft, ChevronRight, Search, X, Loader2, Phone, ShieldCheck, Pencil, Check, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { userService, type User } from '@/services/userService'
 import { cn } from '@/lib/utils/cn'
 
-type Tab = 'all' | 'trial' | 'paid'
-const ROWS_PER_PAGE = 8
+type Tab = 'trial' | 'paid'
+const ROWS_PER_PAGE = 10
 
+// ─── Shift-to-Paid Modal ──────────────────────────────────────────────────────
+function ShiftModal({ user, onClose, onSuccess }: { user: User; onClose: () => void; onSuccess: () => void }) {
+  const [amount, setAmount] = useState('')
+  const [method, setMethod] = useState('cash')
+  const [saving, setSaving] = useState(false)
+  const [err,    setErr]    = useState('')
+
+  const submit = async () => {
+    const n = parseInt(amount, 10)
+    if (!n || n <= 0) { setErr('Enter a valid amount'); return }
+    setSaving(true)
+    try {
+      await userService.shiftToPaid(user.id, n, method)
+      onSuccess()
+      onClose()
+    } catch { setErr('Failed — please try again') }
+    setSaving(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h3 className="font-headline font-black text-xl text-[#1a1a4e] mb-1">Shift to Paid</h3>
+        <p className="text-sm text-slate-500 mb-6">Enter the amount paid by <strong>{user.name}</strong></p>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Amount (NPR)</label>
+            <input type="number" placeholder="e.g. 8500" value={amount} onChange={e => setAmount(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/30" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Payment Method</label>
+            <select value={method} onChange={e => setMethod(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/30">
+              <option value="cash">Cash</option>
+              <option value="esewa">eSewa</option>
+              <option value="khalti">Khalti</option>
+              <option value="bank">Bank Transfer</option>
+            </select>
+          </div>
+          {err && <p className="text-xs text-red-500 font-medium">{err}</p>}
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+          <button onClick={submit} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-[#c0622f] text-white text-sm font-bold hover:bg-[#a14f24] disabled:opacity-60 flex items-center justify-center gap-2">
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Confirm Payment
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Inline Edit Row ──────────────────────────────────────────────────────────
+function EditRow({ user, onSave, onCancel }: { user: User; onSave: (data: Partial<User>) => Promise<void>; onCancel: () => void }) {
+  const [whatsapp,    setWhatsapp]    = useState(user.whatsapp ?? '')
+  const [joinedMethod, setJoinedMethod] = useState(user.joined_method ?? '')
+  const [saving,      setSaving]      = useState(false)
+
+  const save = async () => {
+    setSaving(true)
+    await onSave({ whatsapp, joined_method: joinedMethod })
+    setSaving(false)
+  }
+
+  return (
+    <tr className="bg-blue-50/50">
+      <td colSpan={9} className="px-4 py-4">
+        <div className="flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">WhatsApp Number</label>
+            <input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="98XXXXXXXX"
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20" />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Joined Method / Contact Note</label>
+            <input value={joinedMethod} onChange={e => setJoinedMethod(e.target.value)} placeholder="e.g. WhatsApp referral, Facebook ad..."
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20" />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={save} disabled={saving} className="px-4 py-2 bg-[#1a1a4e] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-[#141432]">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Save
+            </button>
+            <button onClick={onCancel} className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function UserManagementPage() {
-  const [tab,      setTab]      = useState<Tab>('all')
+  const [tab,      setTab]      = useState<Tab>('trial')
   const [query,    setQuery]    = useState('')
   const [page,     setPage]     = useState(1)
-  const [selected, setSelected] = useState<Set<number>>(new Set())
   const [users,    setUsers]    = useState<User[]>([])
   const [total,    setTotal]    = useState(0)
   const [loading,  setLoading]  = useState(true)
+  const [stats,    setStats]    = useState({ total_users: 0, paid_users: 0, trial_users: 0, total_payment: 0, today_payment: 0 })
+  const [shifting, setShifting] = useState<User | null>(null)
+  const [editing,  setEditing]  = useState<number | null>(null)
 
-  const fetchUsers = (t: Tab, q: string, p: number) => {
+  const loadStats = useCallback(() => {
+    userService.getStats().then(r => setStats(r.data as typeof stats)).catch(() => {})
+  }, [])
+
+  const fetchUsers = useCallback((t: Tab, q: string, p: number) => {
     setLoading(true)
-    userService.getUsers({ tab: t === 'all' ? '' : t, search: q, page: p, limit: ROWS_PER_PAGE })
-      .then((res) => {
-        setUsers(res.data?.items ?? [])
-        setTotal(res.data?.total ?? 0)
-      })
+    userService.getUsers({ tab: t, search: q, page: p, limit: ROWS_PER_PAGE })
+      .then(res => { setUsers(res.data?.items ?? []); setTotal(res.data?.total ?? 0) })
       .finally(() => setLoading(false))
-  }
+  }, [])
 
-  useEffect(() => { fetchUsers(tab, query, page) }, [tab, query, page])
+  useEffect(() => { loadStats() }, [loadStats])
+  useEffect(() => { fetchUsers(tab, query, page) }, [tab, query, page, fetchUsers])
 
   const totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE))
-  const changeTab  = (t: Tab) => { setTab(t); setPage(1); setSelected(new Set()) }
-
-  const toggleSelect    = (id: number) => setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
-  const toggleSelectAll = () => setSelected((prev) => {
-    if (users.every((u) => prev.has(u.id))) {
-      const s = new Set(prev); users.forEach((u) => s.delete(u.id)); return s
-    }
-    return new Set([...Array.from(prev), ...users.map((u) => u.id)])
-  })
+  const changeTab  = (t: Tab) => { setTab(t); setPage(1); setEditing(null) }
 
   const toggleStatus = async (u: User) => {
     await userService.updateUser(u.id, { status: u.status === 'active' ? 'suspended' : 'active' })
     fetchUsers(tab, query, page)
   }
 
-  const stats = [
-    { label: 'Total Users',   value: total.toLocaleString(),     badge: 'BridgeCourse', badgeColor: 'text-teal-600 bg-teal-50' },
-    { label: 'Paid Students', value: users.filter(u=>u.plan==='paid').length.toString(),  badge: 'Paid Tier',    badgeColor: 'text-on-primary-container bg-orange-50' },
-    { label: 'Active Trials', value: users.filter(u=>u.plan==='trial').length.toString(), badge: 'Trial Period', badgeColor: 'text-secondary bg-secondary/10' },
+  const saveEdit = async (u: User, data: Partial<User>) => {
+    await userService.updateUser(u.id, data)
+    fetchUsers(tab, query, page)
+    setEditing(null)
+  }
+
+  const statCards = [
+    { label: 'Total Users',     value: stats.total_users,                             badge: 'BridgeCourse', badgeColor: 'text-teal-600 bg-teal-50' },
+    { label: 'Paid Users',      value: stats.paid_users,                              badge: 'Paid Tier',    badgeColor: 'text-on-primary-container bg-orange-50' },
+    { label: 'Trial Users',     value: stats.trial_users,                             badge: 'Trial Period', badgeColor: 'text-secondary bg-secondary/10' },
+    { label: 'Total Payment',   value: `NPR ${stats.total_payment.toLocaleString()}`, badge: 'Revenue',      badgeColor: 'text-green-600 bg-green-50' },
+    { label: "Today's Payment", value: `NPR ${stats.today_payment.toLocaleString()}`, badge: 'Today',        badgeColor: 'text-blue-600 bg-blue-50' },
   ]
 
   return (
-    <div className="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 lg:p-10 max-w-screen-2xl mx-auto">
+      {shifting && (
+        <ShiftModal user={shifting} onClose={() => setShifting(null)}
+          onSuccess={() => { loadStats(); fetchUsers(tab, query, page) }} />
+      )}
+
+      {/* Header */}
       <div className="mb-6 md:mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h2 className="font-headline font-black text-2xl md:text-4xl text-[#1a1a4e] tracking-tight mb-1">User Management</h2>
-          <p className="text-on-surface-variant font-medium text-sm md:text-base">BridgeCourse Nepal — manage students and their academic tiers.</p>
+          <p className="text-on-surface-variant font-medium text-sm">BridgeCourse Nepal — manage students and their academic tiers.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button className="bg-surface-container-highest text-[#1a1a4e] px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors">
@@ -69,14 +175,14 @@ export default function UserManagementPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-white p-6 rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)]">
-            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">{stat.label}</p>
-            <div className="flex items-end justify-between">
-              <h3 className="font-headline font-extrabold text-3xl text-[#1a1a4e]">{stat.value}</h3>
-              <span className={cn('text-xs font-bold px-2 py-1 rounded-lg', stat.badgeColor)}>{stat.badge}</span>
+      {/* Stats — 5 cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-10">
+        {statCards.map(stat => (
+          <div key={stat.label} className="bg-white p-5 rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)]">
+            <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-3">{stat.label}</p>
+            <div className="flex items-end justify-between gap-1">
+              <h3 className="font-headline font-extrabold text-2xl text-[#1a1a4e] truncate">{stat.value}</h3>
+              <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-lg whitespace-nowrap', stat.badgeColor)}>{stat.badge}</span>
             </div>
           </div>
         ))}
@@ -86,18 +192,18 @@ export default function UserManagementPage() {
         {/* Controls */}
         <div className="p-5 border-b border-surface-container flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="flex bg-surface-container-low p-1.5 rounded-2xl">
-            {(['all','trial','paid'] as Tab[]).map((key) => (
+            {(['trial', 'paid'] as Tab[]).map(key => (
               <button key={key} onClick={() => changeTab(key)} className={cn(
                 'px-6 py-2 rounded-xl text-sm font-bold transition-all',
                 tab === key ? 'bg-white text-on-primary-container shadow-sm' : 'text-on-surface-variant hover:text-[#1a1a4e]'
               )}>
-                {key === 'all' ? 'All Users' : key === 'trial' ? 'Trial Only' : 'Paid Only'}
+                {key === 'trial' ? 'Trial Only' : 'Paid Only'}
               </button>
             ))}
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-4 h-4" />
-            <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+            <input value={query} onChange={e => { setQuery(e.target.value); setPage(1) }}
               placeholder="Search users..." className="pl-9 pr-8 py-2 bg-surface-container rounded-xl text-sm border-none focus:ring-2 focus:ring-on-primary-container/20 w-48" />
             {query && <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2"><X className="w-4 h-4 text-outline" /></button>}
           </div>
@@ -111,58 +217,104 @@ export default function UserManagementPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-surface-container-low/50">
-                  <th className="px-6 py-4 border-b border-surface-container">
-                    <input type="checkbox" checked={users.length > 0 && users.every(u => selected.has(u.id))} onChange={toggleSelectAll} className="rounded text-on-primary-container border-outline-variant cursor-pointer" />
-                  </th>
-                  {['Student Name', 'Email', 'Joined', 'Plan', 'Status', ''].map((col) => (
-                    <th key={col} className="px-6 py-4 text-[11px] font-black text-on-surface-variant uppercase tracking-widest border-b border-surface-container">{col}</th>
+                  {['ID', 'Name / Password', 'Email', 'WhatsApp', 'Joined Via', 'Joined', 'Plan / Amount', 'Status', 'Actions'].map(col => (
+                    <th key={col} className="px-4 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest border-b border-surface-container whitespace-nowrap">{col}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-16 text-outline font-medium">No students match your filters.</td></tr>
-                ) : users.map((u, i) => (
-                  <tr key={u.id} className={cn('hover:bg-surface-container-low transition-colors', selected.has(u.id) ? 'bg-primary-fixed/20' : i%2===1 ? 'bg-surface-container-low/20':'')}>
-                    <td className="px-6 py-5">
-                      <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)} className="rounded text-on-primary-container border-outline-variant cursor-pointer" />
+                  <tr><td colSpan={9} className="text-center py-16 text-outline font-medium">No students match your filters.</td></tr>
+                ) : users.map((u, i) => [
+                  // Main row
+                  <tr key={u.id} className={cn('hover:bg-surface-container-low/60 transition-colors', i % 2 === 1 ? 'bg-surface-container-low/20' : '')}>
+                    {/* Student ID */}
+                    <td className="px-4 py-4">
+                      <span className="font-mono text-xs font-black text-[#1a1a4e] bg-surface-container-low px-2 py-1 rounded-lg">
+                        BC-{String(u.id).padStart(4, '0')}
+                      </span>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-on-primary-container flex items-center justify-center text-white text-xs font-bold">
-                          {u.name.split(' ').map(n=>n[0]).join('').slice(0,2)}
+                    {/* Name + password */}
+                    <td className="px-4 py-4 min-w-[160px]">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#1a1a4e] flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">
+                          {u.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
                         <div>
                           <p className="font-bold text-sm text-[#1a1a4e]">{u.name}</p>
-                          <p className="text-[11px] text-on-surface-variant">BC-{String(u.id).padStart(4,'0')}</p>
+                          {u.plain_password && (
+                            <p className="text-[10px] text-slate-400 font-mono mt-0.5 select-all">{u.plain_password}</p>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-sm text-on-surface-variant">{u.email ?? '—'}</td>
-                    <td className="px-6 py-5 text-sm text-on-surface-variant">{u.created_at?.slice(0,10)}</td>
-                    <td className="px-6 py-5">
+                    {/* Email */}
+                    <td className="px-4 py-4 text-sm text-on-surface-variant">{u.email ?? '—'}</td>
+                    {/* WhatsApp */}
+                    <td className="px-4 py-4">
+                      {u.whatsapp ? (
+                        <a href={`https://wa.me/${u.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-green-600 hover:text-green-700 font-medium text-sm">
+                          <Phone className="w-3.5 h-3.5" />
+                          {u.whatsapp}
+                        </a>
+                      ) : <span className="text-slate-300 text-sm">—</span>}
+                    </td>
+                    {/* Joined method */}
+                    <td className="px-4 py-4">
+                      {u.joined_method ? (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="max-w-[120px] truncate">{u.joined_method}</span>
+                        </div>
+                      ) : <span className="text-slate-300 text-sm">—</span>}
+                    </td>
+                    {/* Joined date */}
+                    <td className="px-4 py-4 text-sm text-on-surface-variant whitespace-nowrap">{u.created_at?.slice(0, 10)}</td>
+                    {/* Plan + paid amount */}
+                    <td className="px-4 py-4">
                       <span className={cn('px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider',
                         u.plan === 'paid' ? 'bg-orange-50 text-on-primary-container' : 'bg-secondary/10 text-secondary')}>
                         {u.plan === 'paid' ? 'Premium' : '7-Day Trial'}
                       </span>
+                      {u.paid_amount && (
+                        <p className="text-[11px] text-green-600 font-bold mt-1">NPR {u.paid_amount.toLocaleString()}</p>
+                      )}
                     </td>
-                    <td className="px-6 py-5">
+                    {/* Status toggle */}
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
                         <button onClick={() => toggleStatus(u)} className={cn('w-10 h-5 rounded-full relative shadow-inner transition-colors', u.status === 'active' ? 'bg-teal-500' : 'bg-surface-container-highest')}>
-                          <div className={cn('w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all', u.status==='active' ? 'right-0.5' : 'left-0.5')} />
+                          <div className={cn('w-4 h-4 bg-white rounded-full absolute top-0.5 shadow-sm transition-all', u.status === 'active' ? 'right-0.5' : 'left-0.5')} />
                         </button>
-                        <span className={cn('text-xs font-bold', u.status==='active' ? 'text-teal-600' : 'text-on-surface-variant')}>
-                          {u.status==='active' ? 'Active' : 'Suspended'}
+                        <span className={cn('text-xs font-bold whitespace-nowrap', u.status === 'active' ? 'text-teal-600' : 'text-on-surface-variant')}>
+                          {u.status === 'active' ? 'Active' : 'Suspended'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right">
-                      <Link href={`/admin/users/${u.id}`} className="text-on-surface-variant hover:text-[#1a1a4e] p-2 rounded-lg hover:bg-surface-container transition-all inline-block">
-                        <MoreVertical className="w-5 h-5" />
-                      </Link>
+                    {/* Actions */}
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button onClick={() => setEditing(editing === u.id ? null : u.id)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50">
+                          <Pencil className="w-3 h-3" /> Edit
+                        </button>
+                        {u.plan === 'trial' && (
+                          <button onClick={() => setShifting(u)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-[#c0622f] text-white rounded-lg text-xs font-bold hover:bg-[#a14f24]">
+                            <ShieldCheck className="w-3 h-3" /> Shift to Paid
+                          </button>
+                        )}
+                      </div>
                     </td>
-                  </tr>
-                ))}
+                  </tr>,
+                  // Inline edit row
+                  editing === u.id && (
+                    <EditRow key={`edit-${u.id}`} user={u}
+                      onSave={data => saveEdit(u, data)}
+                      onCancel={() => setEditing(null)} />
+                  ),
+                ].filter(Boolean))}
               </tbody>
             </table>
           </div>
@@ -171,16 +323,16 @@ export default function UserManagementPage() {
         {/* Pagination */}
         <div className="p-6 bg-surface-container-low/30 border-t border-surface-container flex items-center justify-between">
           <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-            Page {page} of {totalPages} · {total} total users
+            Page {page} of {totalPages} · {total} total
           </p>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPage((p) => Math.max(1, p-1))} disabled={page===1} className="w-9 h-9 rounded-xl flex items-center justify-center border border-surface-container hover:bg-white transition-all text-on-surface-variant disabled:opacity-30">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="w-9 h-9 rounded-xl flex items-center justify-center border border-surface-container hover:bg-white transition-all text-on-surface-variant disabled:opacity-30">
               <ChevronLeft className="w-5 h-5" />
             </button>
-            {Array.from({length: Math.min(totalPages, 5)}, (_, i) => i+1).map((p) => (
-              <button key={p} onClick={() => setPage(p)} className={cn('w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs transition-all', page===p ? 'bg-[#1a1a4e] text-white shadow-md' : 'hover:bg-white text-on-surface-variant')}>{p}</button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setPage(p)} className={cn('w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs transition-all', page === p ? 'bg-[#1a1a4e] text-white shadow-md' : 'hover:bg-white text-on-surface-variant')}>{p}</button>
             ))}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p+1))} disabled={page===totalPages} className="w-9 h-9 rounded-xl flex items-center justify-center border border-surface-container hover:bg-white transition-all text-on-surface-variant disabled:opacity-30">
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-9 h-9 rounded-xl flex items-center justify-center border border-surface-container hover:bg-white transition-all text-on-surface-variant disabled:opacity-30">
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>

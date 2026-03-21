@@ -1,7 +1,7 @@
 // Exam Results Page — based exactly on exam_results_model_set/code.html
 // Circular progress + subject breakdown + detailed answer review
 import Link from 'next/link'
-import { CheckCircle, XCircle, Lightbulb, Download, RotateCcw, Stars } from 'lucide-react'
+import { CheckCircle, XCircle, Lightbulb, RotateCcw, Stars } from 'lucide-react'
 
 const mockResult = {
   score:      78,
@@ -38,9 +38,6 @@ export default function ExamResultsPage() {
             Focus on your Physics conceptual errors to reach the top 5%.
           </p>
           <div className="flex flex-wrap gap-4 pt-2">
-            <button className="inline-flex items-center gap-2 px-8 py-3 bg-[#c0622f] text-white font-bold rounded-full hover:bg-[#a14f24] active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
-              <Download className="w-4 h-4" /> Download PDF Report
-            </button>
             <Link
               href="/model-sets/ioe-model-04"
               className="inline-flex items-center gap-2 px-8 py-3 bg-surface-container-high text-[#1a1a4e] font-bold rounded-full hover:bg-surface-container-highest active:scale-95 transition-all"

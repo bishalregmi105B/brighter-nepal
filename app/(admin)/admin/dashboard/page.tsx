@@ -1,10 +1,10 @@
 'use client'
 // Admin Dashboard — updated stats from API, BridgeCourse Nepal branding
 import { useEffect, useState } from 'react'
-import { TrendingUp, Users, CreditCard, BookOpen, Plus, Video, Loader2 } from 'lucide-react'
+import { TrendingUp, Users, CreditCard, BookOpen, Plus, Video, Loader2, UserCheck, Clock } from 'lucide-react'
 import Link from 'next/link'
-import { userService } from '@/services/userService'
-import { paymentService } from '@/services/paymentService'
+import { userService, type UserStats } from '@/services/userService'
+import { api } from '@/services/api'
 
 const quickActions = [
   { label: 'Add Resource',     icon: BookOpen, color: 'bg-[#1a1a4e] text-white',          href: '/admin/resources' },
@@ -13,35 +13,38 @@ const quickActions = [
   { label: 'Schedule Class',   icon: Video,    color: 'bg-secondary text-white',            href: '/admin/live-classes' },
 ]
 
-const recentActivity = [
-  { user: 'Aarav Sharma',    action: 'Completed IOE Mock Set — Set A', score: '82/100', time: '5m ago',  tier: 'Premium' },
-  { user: 'Binita Thapa',    action: 'Started 7-day trial',            score: '—',      time: '12m ago', tier: '7-Day Trial' },
-  { user: 'Chirag Adhikari', action: 'Downloaded Organic Chem Notes',  score: '—',      time: '23m ago', tier: '7-Day Trial' },
-  { user: 'Dipika Rai',      action: 'Attended Live Calculus Class',   score: '—',      time: '1h ago',  tier: 'Premium' },
-  { user: 'Kritika Shrestha','action': 'Completed Weekly Test — Optics', score: '91/100', time: '2h ago', tier: 'Premium' },
-]
+type ActivityRow = { user: string; action: string; score: string; tier: string; time: string }
+
+function relativeTime(iso: string) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (diff < 60)   return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400)return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
 
 export default function AdminDashboardPage() {
-  const [totalUsers,    setTotalUsers]    = useState<number | null>(null)
-  const [totalRevenue,  setTotalRevenue]  = useState<string>('—')
+  const [stats,    setStats]    = useState<UserStats | null>(null)
+  const [activity, setActivity] = useState<ActivityRow[]>([])
 
   useEffect(() => {
-    userService.getUsers({ limit: 1 }).then((res) => {
-      setTotalUsers(res.data?.total ?? null)
-    }).catch(() => {})
-
-    paymentService.getPayments({ status: 'completed', page: 1 }).then((res) => {
-      const items = res.data?.items ?? []
-      const sum   = items.reduce((s, p) => s + p.amount, 0)
-      setTotalRevenue(`NPR ${sum.toLocaleString()}`)
-    }).catch(() => {})
+    userService.getStats().then(res => setStats(res.data as UserStats)).catch(() => {})
+    api.get<{ data: ActivityRow[] }>('/api/users/recent-activity').then(res => setActivity(res.data ?? [])).catch(() => {})
   }, [])
 
-  const statsCards = [
-    { label: 'Total Students', value: totalUsers !== null ? totalUsers.toLocaleString() : '…', change: 'BridgeCourse', up: true,  color: 'text-teal-600 bg-teal-50' },
-    { label: 'Revenue',        value: totalRevenue,                                             change: 'Collected',   up: true,  color: 'text-on-primary-container bg-orange-50' },
-    { label: 'Active Batches', value: '3',                                                      change: 'IOE·IOM·CSIT',up: true,  color: 'text-secondary bg-secondary/5' },
-    { label: 'Model Sets Live', value: '9',                                                     change: 'Published',   up: true,  color: 'text-[#2d6a6a] bg-teal-50' },
+  const fmt = (n: number) => n.toLocaleString()
+  const fmtNpr = (n: number) => `NPR ${n.toLocaleString()}`
+
+  const topCards = [
+    { label: 'Total Students', value: stats ? fmt(stats.total_users)        : '…', icon: Users,     change: 'BridgeCourse', color: 'text-teal-600 bg-teal-50' },
+    { label: 'Paid Students',  value: stats ? fmt(stats.paid_users)         : '…', icon: UserCheck,  change: 'Paid Tier',    color: 'text-on-primary-container bg-orange-50' },
+    { label: 'Trial Students', value: stats ? fmt(stats.trial_users)        : '…', icon: Clock,      change: 'Trial Period',  color: 'text-secondary bg-secondary/5' },
+    { label: 'Total Revenue',  value: stats ? fmtNpr(stats.total_payment)   : '…', icon: CreditCard, change: 'Collected',    color: 'text-[#2d6a6a] bg-teal-50' },
+  ]
+
+  const todayCards = [
+    { label: "Today's Revenue",     value: stats ? fmtNpr(stats.today_payment) : '…', color: 'text-green-600 bg-green-50',  change: 'Today' },
+    { label: "Today's Enrollments", value: stats ? fmt(stats.today_enroll)     : '…', color: 'text-blue-600 bg-blue-50',    change: 'New' },
   ]
 
   return (
@@ -64,18 +67,36 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-        {statsCards.map((stat, i) => (
-          <div key={i} className="bg-white rounded-2xl shadow-card p-6">
-            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">{stat.label}</p>
-            <div className="flex items-end justify-between gap-2">
-              <h3 className="font-headline font-extrabold text-3xl text-[#1a1a4e]">
-                {stat.value === '…' ? <Loader2 className="w-6 h-6 animate-spin inline" /> : stat.value}
-              </h3>
-              <span className={`text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-0.5 ${stat.color}`}>
-                <TrendingUp className="w-3 h-3" /> {stat.change}
+      {/* Top Stats — 4 main cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        {topCards.map((stat, i) => {
+          const Icon = stat.icon
+          return (
+            <div key={i} className="bg-white rounded-2xl shadow-card p-6">
+              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">{stat.label}</p>
+              <div className="flex items-end justify-between gap-2">
+                <h3 className="font-headline font-extrabold text-3xl text-[#1a1a4e]">
+                  {stat.value === '…' ? <Loader2 className="w-6 h-6 animate-spin inline" /> : stat.value}
+                </h3>
+                <span className={`text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-0.5 ${stat.color}`}>
+                  <TrendingUp className="w-3 h-3" /> {stat.change}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Today Stats — 2 "today" cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+        {todayCards.map((stat, i) => (
+          <div key={i} className="bg-white rounded-2xl shadow-card p-5 flex items-center justify-between">
+            <p className="text-sm font-bold text-on-surface-variant">{stat.label}</p>
+            <div className="flex items-center gap-2">
+              <span className="font-headline font-extrabold text-2xl text-[#1a1a4e]">
+                {stat.value === '…' ? <Loader2 className="w-5 h-5 animate-spin inline" /> : stat.value}
               </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${stat.color}`}>{stat.change}</span>
             </div>
           </div>
         ))}
@@ -137,10 +158,11 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity — real data */}
       <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-        <div className="p-6 border-b border-surface-container">
+        <div className="p-6 border-b border-surface-container flex items-center justify-between">
           <h3 className="font-headline font-bold text-lg text-[#1a1a4e]">Recent Activity</h3>
+          {activity.length === 0 && <span className="text-xs text-slate-400">No exam submissions yet</span>}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -152,7 +174,9 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {recentActivity.map((row, i) => (
+              {activity.length === 0 ? (
+                <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-400 text-sm">Students haven&apos;t submitted any exams yet.</td></tr>
+              ) : activity.map((row, i) => (
                 <tr key={i} className="hover:bg-surface-container-low transition-colors border-b border-surface-container last:border-0">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -169,7 +193,7 @@ export default function AdminDashboardPage() {
                       {row.tier}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs text-on-surface-variant font-medium">{row.time}</td>
+                  <td className="px-6 py-4 text-xs text-on-surface-variant font-medium">{relativeTime(row.time)}</td>
                 </tr>
               ))}
             </tbody>

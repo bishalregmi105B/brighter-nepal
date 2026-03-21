@@ -12,6 +12,7 @@ import { getAnswerOptionClass, getQuestionBubbleClass } from '@/lib/utils/examUt
 import { cn } from '@/lib/utils/cn'
 import { ChevronLeft, ChevronRight, Flag, CheckSquare, Clock, Loader2 } from 'lucide-react'
 import type { Exam } from '@/lib/types/exam'
+import ReactMarkdown from 'react-markdown'
 
 function buildExamFromModelSet(raw: ReturnType<typeof modelSetService.getModelSet> extends Promise<{ data: infer T }> ? T : never): Exam {
   // Transform API questions into the Exam type expected by examStore
@@ -43,17 +44,18 @@ export default function ExamPage() {
   const router  = useRouter()
   const store   = useExamStore()
   const { openSubmitModal } = useUiStore()
-  const [exam,     setExam]    = useState<Exam | null>(null)
-  const [loading,  setLoading] = useState(true)
+  const [exam,          setExam]         = useState<Exam | null>(null)
+  const [loading,       setLoading]      = useState(true)
+  const [activeSubject, setActiveSubject] = useState<string>('General')   // MUST be above all early returns
 
   useEffect(() => {
     if (!params.id) return
-    // If exam already active in store for same set, reuse it
     if (store.exam?.id === params.id) { setExam(store.exam); setLoading(false); return }
     modelSetService.getModelSet(Number(params.id)).then((res) => {
       const built = buildExamFromModelSet(res.data as Parameters<typeof buildExamFromModelSet>[0])
       if (built.questions.length > 0) {
         store.startExam(built, built.duration)
+        setActiveSubject(built.questions[0]?.subject ?? 'General')
       }
       setExam(built)
     }).finally(() => setLoading(false))
@@ -70,12 +72,6 @@ export default function ExamPage() {
     </div>
   )
 
-  const currentQuestion = exam.questions[store.currentIndex]
-  const currentSession  = store.sessions[currentQuestion?.id]
-  const totalAnswered   = Object.values(store.sessions).filter(s => s.selectedId).length
-  const subjects        = Array.from(new Set(exam.questions.map(q => q.subject)))
-  const [activeSubject, setActiveSubject] = useState(subjects[0] ?? 'General')
-
   if (exam.questions.length === 0) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#f8f9fb]">
@@ -87,6 +83,11 @@ export default function ExamPage() {
       </div>
     )
   }
+
+  const currentQuestion = exam.questions[store.currentIndex]
+  const currentSession  = store.sessions[currentQuestion?.id]
+  const totalAnswered   = Object.values(store.sessions).filter(s => s.selectedId).length
+  const subjects        = Array.from(new Set(exam.questions.map(q => q.subject)))
 
   if (!currentQuestion) return null
 
@@ -131,7 +132,9 @@ export default function ExamPage() {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Q{currentQuestion.number} • {currentQuestion.subject}</span>
-                <p className="text-xl font-semibold text-[#1a1a4e] leading-relaxed">{currentQuestion.text}</p>
+                <div className="text-xl font-semibold text-[#1a1a4e] leading-relaxed prose prose-slate max-w-none">
+                  <ReactMarkdown>{currentQuestion.text}</ReactMarkdown>
+                </div>
               </div>
               <button onClick={() => store.markForReview(currentQuestion.id)} className="flex-shrink-0 ml-4 p-2 hover:bg-secondary-fixed/20 rounded-lg transition-colors">
                 <Flag className={cn('w-5 h-5', currentSession?.status === 'marked' ? 'text-secondary fill-secondary' : 'text-slate-400')} />
@@ -146,7 +149,9 @@ export default function ExamPage() {
                       isSelected ? 'bg-on-primary-container border-on-primary-container text-white' : 'border-surface-container-high text-on-surface-variant')}>
                       {opt.label}
                     </span>
-                    <span className="text-base text-on-surface">{opt.text}</span>
+                    <span className="text-base text-on-surface prose prose-sm max-w-none">
+                      <ReactMarkdown>{opt.text}</ReactMarkdown>
+                    </span>
                     {isSelected && <CheckSquare className="w-5 h-5 text-on-primary-container ml-auto" />}
                   </label>
                 )

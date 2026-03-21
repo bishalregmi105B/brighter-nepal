@@ -95,6 +95,9 @@ export default function RecordedLecturesPage() {
                     <Link href={`/recorded-lectures/${lec.id}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c0622f] text-white text-xs font-bold rounded-lg hover:bg-[#a14f24] transition-colors">
                       <Play className="w-3.5 h-3.5 fill-white" /> Watch
                     </Link>
+                    <Link href={`/recorded-lectures/${lec.id}?tab=resources`} className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low border border-outline-variant/20 text-[#1a1a4e] text-xs font-bold rounded-lg hover:bg-surface-container transition-colors">
+                      <Download className="w-3.5 h-3.5" /> Resources
+                    </Link>
                   </div>
                 </div>
               </div>

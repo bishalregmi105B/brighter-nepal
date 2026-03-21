@@ -1,15 +1,29 @@
 'use client'
 // Student Study Materials — fetches real data from resourceService
 import { useEffect, useState, useMemo } from 'react'
-import { Search, BookOpen, Video, FileText, Download, Eye, X, Loader2 } from 'lucide-react'
+import { Search, BookOpen, Video, FileText, Eye, X, Loader2, Globe, FileArchive, Headphones } from 'lucide-react'
 import { resourceService, type Resource } from '@/services/resourceService'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
 
 const SECTION_TABS = ['All', 'Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'College Model Questions', 'Extra Study Materials']
 
-const formatBadge: Record<string, string> = { pdf: 'bg-red-100 text-red-600', video: 'bg-blue-100 text-blue-600', notes: 'bg-green-100 text-green-600' }
-const formatLabel: Record<string, string> = { pdf: 'PDF', video: 'Video', notes: 'Notes' }
+const formatBadge: Record<string, string> = {
+  pdf:   'bg-red-100 text-red-600',
+  video: 'bg-blue-100 text-blue-600',
+  notes: 'bg-green-100 text-green-600',
+  link:  'bg-sky-100 text-sky-600',
+  file:  'bg-orange-100 text-orange-600',
+  audio: 'bg-purple-100 text-purple-600',
+}
+const formatLabel: Record<string, string> = {
+  pdf:   'PDF',
+  video: 'Video',
+  notes: 'Notes',
+  link:  'Link',
+  file:  'File',
+  audio: 'Audio',
+}
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
@@ -93,18 +107,12 @@ export default function ResourcesPage() {
                   ))}
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-400 font-medium">{res.downloads?.toLocaleString()} downloads</span>
+                  <span className="text-xs text-slate-400 font-medium">{res.downloads?.toLocaleString()} views</span>
                   <div className="flex gap-2">
                     <Link href={`/resources/${res.id}`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container text-on-surface text-xs font-bold rounded-lg hover:bg-surface-container-high transition-colors">
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c0622f] text-white text-xs font-bold rounded-lg hover:bg-[#a14f24] transition-colors">
                       <Eye className="w-3.5 h-3.5" />{res.format === 'video' ? 'Watch' : 'View'}
                     </Link>
-                    {res.format !== 'video' && (
-                      <a href={res.file_url || '#'} download
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c0622f] text-white text-xs font-bold rounded-lg hover:bg-[#a14f24] transition-colors">
-                        <Download className="w-3.5 h-3.5" /> Download
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>

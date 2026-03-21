@@ -1,17 +1,18 @@
 'use client'
 /**
  * Recorded Lecture Video Player Page — /recorded-lectures/[id]
- * Fetches the completed live class by ID and renders a full video player UI.
- * Since live classes don't have actual video URLs in the DB, we show a
- * YouTube-style embedded player placeholder + lecture metadata.
+ * Has tabs: Video Player + Resources (fetches resources linked to this live class)
  */
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Clock, Calendar, Users, BookOpen } from 'lucide-react'
+import { ArrowLeft, Clock, Calendar, Users, BookOpen, Play, FileText, Video, ExternalLink, Loader2, Film } from 'lucide-react'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
+import { resourceService, type Resource } from '@/services/resourceService'
 import { cn } from '@/lib/utils/cn'
 import { SecureVideoPlayer } from '@/components/media/SecureVideoPlayer'
+
+type Tab = 'video' | 'resources'
 
 const subjectColors: Record<string, string> = {
   Mathematics: 'bg-blue-100 text-blue-700',
@@ -21,19 +22,37 @@ const subjectColors: Record<string, string> = {
   English:     'bg-orange-100 text-orange-700',
 }
 
+const formatIcon = (fmt: string) => {
+  if (fmt === 'video') return <Video className="w-4 h-4 text-on-primary-container" />
+  return <FileText className="w-4 h-4 text-secondary" />
+}
+
 export default function RecordedLectureVideoPage() {
-  const params = useParams<{ id: string }>()
-  const router = useRouter()
-  const [lecture, setLecture] = useState<LiveClass | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [playing, setPlaying] = useState(false)
+  const params      = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
+  const [lecture,   setLecture]   = useState<LiveClass | null>(null)
+  const [resources, setResources] = useState<Resource[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [resLoading, setResLoading] = useState(false)
+  const [playing,   setPlaying]   = useState(false)
+  const [tab,       setTab]       = useState<Tab>(() =>
+    searchParams.get('tab') === 'resources' ? 'resources' : 'video'
+  )
 
   useEffect(() => {
     if (!params.id) return
     liveClassService.getClass(Number(params.id))
-      .then((res) => setLecture(res.data))
+      .then(res => setLecture(res.data))
       .catch(() => setLecture(null))
       .finally(() => setLoading(false))
+  }, [params.id])
+
+  useEffect(() => {
+    if (!params.id) return
+    setResLoading(true)
+    resourceService.getResources({ live_class_id: Number(params.id) })
+      .then(res => setResources(res.data?.items ?? []))
+      .finally(() => setResLoading(false))
   }, [params.id])
 
   if (loading) return (
@@ -77,14 +96,15 @@ export default function RecordedLectureVideoPage() {
         </div>
       </div>
 
-      {/* Video Content Area */}
+      {/* Video + tab container */}
       <div className="w-full max-w-6xl mx-auto flex flex-col flex-1 pb-12">
+        {/* Video Player */}
         {playing ? (
           <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 shadow-lg lg:rounded-b-2xl overflow-hidden">
-            <SecureVideoPlayer 
-              videoUrl={lecture.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'} 
+            <SecureVideoPlayer
+              videoUrl={lecture.stream_url ?? 'https://www.youtube.com/@BRIGHTERNEPAL1'}
               title={lecture.title}
-              className="w-full h-full rounded-none" 
+              className="w-full h-full rounded-none"
             />
           </div>
         ) : (
@@ -100,23 +120,86 @@ export default function RecordedLectureVideoPage() {
           </div>
         )}
 
-        {/* Details Area below Video */}
-        <div className="p-6 md:p-8 text-[#1a1a4e] space-y-6">
-          <div className="flex flex-wrap items-center gap-3">
-             <span className="bg-[#1a1a4e]/5 border border-[#1a1a4e]/10 text-[#1a1a4e] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{lecture.subject}</span>
-             <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Clock className="w-4 h-4"/> {lecture.duration_min} mins</span>
-             <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Calendar className="w-4 h-4"/> Recorded on {scheduledDate}</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-headline font-bold leading-tight">{lecture.title}</h1>
-          <div className="flex items-center gap-4 pt-2">
-            <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-[#1a1a4e] text-lg shadow-sm">
-              {lecture.teacher?.[0] ?? 'T'}
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-5 border-b border-surface-container">
+          {([
+            { key: 'video',     label: 'Details',   icon: <Film className="w-4 h-4" /> },
+            { key: 'resources', label: `Resources${resources.length > 0 ? ` (${resources.length})` : ''}`, icon: <BookOpen className="w-4 h-4" /> },
+          ] as { key: Tab; label: string; icon: React.ReactNode }[]).map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)} className={cn(
+              'flex items-center gap-2 px-4 py-2.5 -mb-px font-bold text-sm border-b-2 transition-all',
+              tab === t.key
+                ? 'border-on-primary-container text-on-primary-container'
+                : 'border-transparent text-slate-500 hover:text-[#1a1a4e]'
+            )}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-6 md:p-8">
+          {tab === 'video' && (
+            <div className="space-y-6 text-[#1a1a4e]">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={cn('px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest', badgeClass)}>{lecture.subject}</span>
+                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Clock className="w-4 h-4"/> {lecture.duration_min} mins</span>
+                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Calendar className="w-4 h-4"/> Recorded on {scheduledDate}</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-headline font-bold leading-tight">{lecture.title}</h1>
+              <div className="flex items-center gap-4 pt-2">
+                <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-[#1a1a4e] text-lg shadow-sm">
+                  {lecture.teacher?.[0] ?? 'T'}
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-slate-700">Instructor</p>
+                  <p className="text-[#1a1a4e] font-medium">{lecture.teacher}</p>
+                </div>
+              </div>
             </div>
+          )}
+
+          {tab === 'resources' && (
             <div>
-              <p className="font-bold text-sm text-slate-700">Instructor</p>
-              <p className="text-[#1a1a4e] font-medium">{lecture.teacher}</p>
+              <h3 className="font-headline font-bold text-lg text-[#1a1a4e] mb-1">Lecture Resources</h3>
+              <p className="text-sm text-slate-500 mb-6">Study materials linked to this recording.</p>
+
+              {resLoading ? (
+                <div className="flex items-center gap-3 text-slate-500 py-8">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm font-medium">Loading resources…</span>
+                </div>
+              ) : resources.length === 0 ? (
+                <div className="text-center py-16">
+                  <BookOpen className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                  <p className="text-slate-500 font-medium">No resources linked to this lecture yet.</p>
+                  <p className="text-slate-400 text-sm mt-1">Check the main <Link href="/resources" className="underline text-on-primary-container">Resources</Link> library.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {resources.map(res => (
+                    <div key={res.id} className="bg-white rounded-2xl border border-surface-container p-5 flex items-start gap-4 hover:shadow-md transition-all group">
+                      <div className="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center flex-shrink-0">
+                        {formatIcon(res.format)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-[#1a1a4e] leading-snug line-clamp-2 mb-1">{res.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-outline bg-surface-container-low px-2 py-0.5 rounded">{res.format}</span>
+                          {res.size_label && <span className="text-[11px] text-outline">{res.size_label}</span>}
+                          <span className="text-[11px] text-outline">{res.downloads} downloads</span>
+                        </div>
+                      </div>
+                      <Link href={`/resources/${res.id}`}
+                        className="flex-shrink-0 w-9 h-9 rounded-xl bg-[#c0622f] flex items-center justify-center hover:bg-[#a14f24] transition-all" title="View resource">
+                        {res.format === 'video' ? <Play className="w-4 h-4 fill-white text-white" /> : <BookOpen className="w-4 h-4 text-white" />}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

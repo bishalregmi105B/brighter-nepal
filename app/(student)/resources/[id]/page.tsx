@@ -1,39 +1,37 @@
 'use client'
 /**
  * Resource Detail / Preview Page — /resources/[id]
- * Fetches a single resource by ID and shows:
- * - File preview embed (PDF iframe, video player, or notes viewer)  
- * - Metadata: subject, format, size, downloads
- * - Download button
+ * Uses ResourceViewer to intelligently render all 5 resource types inline.
  */
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, FileText, Video, BookOpen,
-  Download, Tag, HardDrive, Loader2, ExternalLink
+  ArrowLeft, FileText, Video, BookOpen, Globe, FileArchive,
+  Eye, Tag, HardDrive, Loader2
 } from 'lucide-react'
 import { resourceService, type Resource } from '@/services/resourceService'
+import { ResourceViewer } from '@/components/media/ResourceViewer'
 import { cn } from '@/lib/utils/cn'
-import { SecurePDFViewer } from '@/components/media/SecurePDFViewer'
-import { SecureVideoPlayer } from '@/components/media/SecureVideoPlayer'
 
-const formatBadge: Record<string, string> = {
-  pdf:   'bg-red-100 text-red-600',
-  video: 'bg-blue-100 text-blue-600',
-  notes: 'bg-green-100 text-green-600',
+// ── Visual config per format ────────────────────────────────────────────────
+const FORMAT_CONFIG: Record<string, {
+  badge: string
+  Icon: React.ComponentType<{ className?: string }>
+  label: string
+}> = {
+  pdf:   { badge: 'bg-red-100 text-red-600',     Icon: FileText,    label: 'PDF Document' },
+  video: { badge: 'bg-blue-100 text-blue-600',   Icon: Video,       label: 'Video Lesson'  },
+  notes: { badge: 'bg-green-100 text-green-600', Icon: BookOpen,    label: 'Notes / Docs'  },
+  link:  { badge: 'bg-sky-100 text-sky-600',     Icon: Globe,       label: 'Website Link'  },
+  file:  { badge: 'bg-orange-100 text-orange-600', Icon: FileArchive, label: 'File'         },
 }
-const FormatIcon: Record<string, React.ComponentType<{ className?: string }>> = {
-  pdf:   FileText,
-  video: Video,
-  notes: BookOpen,
-}
+const DEFAULT_CFG = { badge: 'bg-slate-100 text-slate-600', Icon: FileText, label: 'Resource' }
 
 export default function ResourceDetailPage() {
   const params = useParams<{ id: string }>()
   const [resource, setResource] = useState<Resource | null>(null)
   const [loading,  setLoading]  = useState(true)
-  const [downloaded, setDownloaded] = useState(false)
 
   useEffect(() => {
     if (!params.id) return
@@ -42,17 +40,6 @@ export default function ResourceDetailPage() {
       .catch(() => setResource(null))
       .finally(() => setLoading(false))
   }, [params.id])
-
-  const handleDownload = async () => {
-    if (!resource) return
-    try {
-      await resourceService.logDownload(Number(params.id))
-    } catch {}
-    setDownloaded(true)
-    if (resource.file_url && resource.file_url !== '#') {
-      window.open(resource.file_url, '_blank')
-    }
-  }
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -67,7 +54,8 @@ export default function ResourceDetailPage() {
     </div>
   )
 
-  const Icon = FormatIcon[resource.format] ?? FileText
+  const cfg  = FORMAT_CONFIG[resource.format] ?? DEFAULT_CFG
+  const Icon = cfg.Icon
   const tags: string[] = Array.isArray(resource.tags)
     ? resource.tags
     : typeof resource.tags === 'string'
@@ -75,7 +63,7 @@ export default function ResourceDetailPage() {
     : []
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
       {/* Back */}
       <Link href="/resources" className="flex items-center gap-2 text-sm font-semibold text-on-surface-variant hover:text-on-primary-container transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to Resources
@@ -83,21 +71,30 @@ export default function ResourceDetailPage() {
 
       {/* Hero card */}
       <div className="bg-white rounded-2xl shadow-[0_12px_32px_rgba(25,28,30,0.06)] overflow-hidden">
-        {/* Preview area */}
-        <div className="bg-gradient-to-br from-[#1a1a4e] to-[#2d2d6e] h-48 md:h-64 flex flex-col items-center justify-center text-white relative">
-          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-            <Icon className="w-8 h-8 text-on-primary-container" />
+        {/* Cover / thumbnail */}
+        {resource.thumbnail_url ? (
+          <div className="h-48 md:h-64 overflow-hidden relative">
+            <img src={resource.thumbnail_url} alt={resource.title}
+              className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <span className={cn(
+              'absolute bottom-4 left-6 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest',
+              cfg.badge
+            )}>{cfg.label}</span>
           </div>
-          <span className={cn(
-            'px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest',
-            formatBadge[resource.format] ?? 'bg-slate-100 text-slate-600'
-          )}>
-            {resource.format.toUpperCase()}
-          </span>
-        </div>
+        ) : (
+          <div className="bg-gradient-to-br from-[#1a1a4e] to-[#2d2d6e] h-40 md:h-52 flex flex-col items-center justify-center text-white relative">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-3">
+              <Icon className="w-7 h-7 text-on-primary-container" />
+            </div>
+            <span className={cn('px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest', cfg.badge)}>
+              {cfg.label}
+            </span>
+          </div>
+        )}
 
-        {/* Content */}
-        <div className="p-6 md:p-8 space-y-5">
+        {/* Metadata */}
+        <div className="p-6 md:p-8 space-y-4">
           <div>
             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">{resource.subject}</p>
             <h1 className="font-headline font-black text-xl md:text-2xl text-[#1a1a4e] leading-tight">{resource.title}</h1>
@@ -106,8 +103,15 @@ export default function ResourceDetailPage() {
             )}
           </div>
 
-          {/* Stats row */}
-          <div className="flex flex-wrap gap-4">
+          {/* Description */}
+          {resource.description && (
+            <p className="text-sm text-on-surface-variant leading-relaxed border-t border-slate-100 pt-4">
+              {resource.description}
+            </p>
+          )}
+
+          {/* Stats */}
+          <div className="flex flex-wrap gap-4 pt-1">
             {resource.size_label && (
               <div className="flex items-center gap-1.5 text-sm text-on-surface-variant">
                 <HardDrive className="w-4 h-4" />
@@ -115,14 +119,14 @@ export default function ResourceDetailPage() {
               </div>
             )}
             <div className="flex items-center gap-1.5 text-sm text-on-surface-variant">
-              <Download className="w-4 h-4" />
-              <span>{(resource.downloads ?? 0).toLocaleString()} downloads</span>
+              <Eye className="w-4 h-4" />
+              <span>{(resource.downloads ?? 0).toLocaleString()} views</span>
             </div>
           </div>
 
           {/* Tags */}
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               {tags.map((tag) => (
                 <span key={tag} className="flex items-center gap-1 bg-surface-container-low px-3 py-1 rounded-full text-xs font-semibold text-on-surface-variant">
                   <Tag className="w-3 h-3" />{tag}
@@ -130,60 +134,11 @@ export default function ResourceDetailPage() {
               ))}
             </div>
           )}
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-3 pt-2">
-            {/* Show download button only for open formats we want easily downloadable (like raw zips perhaps, though right now we secure pdf/notes/video) */}
-            {!['pdf', 'video', 'notes'].includes(resource.format) && (
-              <button
-                onClick={handleDownload}
-                className={cn(
-                  'flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all',
-                  downloaded
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-on-primary-container text-white hover:opacity-90 active:scale-95 shadow-lg shadow-on-primary-container/20'
-                )}
-              >
-                <Download className="w-4 h-4" />
-                {downloaded ? 'Downloaded!' : `Download ${resource.format.toUpperCase()}`}
-              </button>
-            )}
-            
-            {/* Open in new tab only for completely non-secure files */}
-            {!['pdf', 'video', 'notes'].includes(resource.format) && resource.file_url && resource.file_url !== '#' && (
-              <a
-                href={resource.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-5 py-3 bg-surface-container rounded-xl font-bold text-sm hover:bg-surface-container-high transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Open in New Tab
-              </a>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Secure Video Player */}
-      {resource.format === 'video' && resource.file_url && resource.file_url !== '#' && (
-        <div className="bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] overflow-hidden p-2 md:p-4">
-          <SecureVideoPlayer
-            videoUrl={resource.file_url}
-            title={resource.title}
-            className="w-full shadow-lg"
-          />
-        </div>
-      )}
-
-      {/* Secure PDF Viewer */}
-      {['pdf', 'notes'].includes(resource.format) && resource.file_url && resource.file_url !== '#' && (
-        <SecurePDFViewer
-          pdfUrl={resource.file_url}
-          title={resource.title}
-          className="shadow-[0_8px_20px_rgba(25,28,30,0.04)]"
-        />
-      )}
+      {/* Content viewer — smart by type */}
+      <ResourceViewer resource={resource} />
     </div>
   )
 }

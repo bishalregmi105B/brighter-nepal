@@ -13,6 +13,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Clock, ChevronLeft, ChevronRight, Flag, CheckSquare, Loader2, AlertCircle } from 'lucide-react'
 import { weeklyTestService, type WeeklyTest, type Question } from '@/services/weeklyTestService'
 import { cn } from '@/lib/utils/cn'
+import ReactMarkdown from 'react-markdown'
 
 type AnswerMap = Record<number, number>  // questionId → chosen option index
 
@@ -147,7 +148,9 @@ export default function WeeklyTestExamPage() {
             <p className="text-xs font-bold text-on-primary-container uppercase tracking-widest mb-4">
               {test.subject} · Q{current + 1}
             </p>
-            <p className="text-base md:text-lg font-semibold text-[#1a1a4e] leading-relaxed">{q.text}</p>
+            <div className="text-base md:text-lg font-semibold text-[#1a1a4e] leading-relaxed prose prose-slate max-w-none">
+              <ReactMarkdown>{q.text}</ReactMarkdown>
+            </div>
           </div>
 
           {/* Options */}
@@ -171,7 +174,9 @@ export default function WeeklyTestExamPage() {
                   )}>
                     {OPTS[idx]}
                   </span>
-                  <span className="text-sm md:text-base">{opt}</span>
+                  <span className="text-sm md:text-base prose prose-sm max-w-none">
+                    <ReactMarkdown>{opt}</ReactMarkdown>
+                  </span>
                 </button>
               )
             })}
