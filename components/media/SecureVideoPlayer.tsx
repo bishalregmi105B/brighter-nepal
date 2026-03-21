@@ -1,141 +1,168 @@
 'use client'
 /**
- * SecureVideoPlayer — YouTube-based video player with security protections:
- *  - No download button
- *  - Right-click context menu disabled
- *  - fullscreen support
- *  - Branded watermark overlay
- *  - Mobile inline playback
- *
- * Usage:
- *   <SecureVideoPlayer videoUrl="https://youtube.com/watch?v=XXX" title="Lecture Title" />
- *   <SecureVideoPlayer videoUrl="https://youtu.be/XXX" />
+ * SecureVideoPlayer — Video player wrapper using external csPlayer framework:
+ *  - Hides YouTube watermarks cleanly
+ *  - Disables right click
  */
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { Loader2, Maximize2, ShieldCheck, PlayCircle } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Maximize2, ShieldCheck, PlayCircle } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
-// Extend window for YouTube API
+// Extend window for csPlayer
 declare global {
   interface Window {
-    onYouTubeIframeAPIReady?: () => void
-    YT?: {
-      Player: new (el: HTMLElement | string, opts: object) => YTPlayer
-      PlayerState: { PLAYING: number; PAUSED: number; ENDED: number }
+    csPlayer?: {
+      init: (id: string, options: any) => Promise<void>
+      destroy: (id: string) => void
     }
+    onYouTubeIframeAPIReady?: () => void
+    YT?: any
   }
 }
 
-interface YTPlayer {
-  destroy: () => void
-  playVideo: () => void
-  pauseVideo: () => void
-}
-
 interface SecureVideoPlayerProps {
-  videoUrl:   string        // YouTube URL or direct mp4 URL
+  videoUrl:   string
   title?:     string
   className?: string
-  onPlay?:    () => void
-  onPause?:   () => void
-  onEnd?:     () => void
 }
 
 /** Extract YouTube video ID from any YT URL format */
 function extractYouTubeId(url: string): string | null {
   if (!url) return null;
-
   const regexps = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
       /youtube\.com\/live\/([^&\n?#]+)/
   ];
-
   for (const regex of regexps) {
       const match = url.match(regex);
-      if (match && match[1]) {
-          return match[1];
-      }
+      if (match && match[1]) return match[1];
   }
-  
-  // Try raw 11 chars
   if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
-  
   return null;
 }
 
 export function SecureVideoPlayer({
-  videoUrl, title, className, onPlay, onPause, onEnd
+  videoUrl, title, className
 }: SecureVideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const playerRef    = useRef<YTPlayer | null>(null)
   const playerDivRef = useRef<HTMLDivElement>(null)
-  const [ready,    setReady]   = useState(false)
-  const [playing,  setPlaying] = useState(false)
-  const [error,    setError]   = useState('')
+  
+  const [areScriptsReady, setAreScriptsReady] = useState(false)
+  const [playerError,     setPlayerError]     = useState('')
+  const currentPlayerIdRef = useRef<string | null>(null)
 
   const ytId = extractYouTubeId(videoUrl)
 
-  // Load YT IFrame API once
+  // Load CSS, YT API, and csPlayer.js
   useEffect(() => {
-    if (window.YT?.Player) { setReady(true); return }
+    let isMounted = true;
 
-    window.onYouTubeIframeAPIReady = () => setReady(true)
-
-    if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-      const s = document.createElement('script')
-      s.src   = 'https://www.youtube.com/iframe_api'
-      s.async = true
-      document.head.appendChild(s)
+    // Load CSS
+    if (!document.querySelector('link[href="/csPlayer.css"]')) {
+      const cssLink = document.createElement('link')
+      cssLink.rel = 'stylesheet'
+      cssLink.href = '/csPlayer.css'
+      document.head.appendChild(cssLink)
     }
 
-    return () => { window.onYouTubeIframeAPIReady = undefined }
-  }, [])
+    const onReady = () => {
+      if (isMounted && window.YT && window.YT.Player && window.csPlayer) {
+        setAreScriptsReady(true);
+      }
+    };
 
-  // Init / destroy player when YT ready and ytId available
+    if (window.YT && window.YT.Player) {
+      if (window.csPlayer) { onReady(); }
+      else {
+        const csScript = document.createElement('script')
+        csScript.src = '/csPlayer.js'
+        csScript.async = true
+        csScript.onload = onReady
+        csScript.onerror = () => { if (isMounted) setPlayerError('Failed to load player script'); }
+        document.head.appendChild(csScript)
+      }
+    } else {
+      window.onYouTubeIframeAPIReady = () => {
+        if (window.csPlayer) { onReady(); }
+        else {
+          const csScript = document.createElement('script')
+          csScript.src = '/csPlayer.js'
+          csScript.async = true
+          csScript.onload = onReady
+          csScript.onerror = () => { if (isMounted) setPlayerError('Failed to load player script'); }
+          document.head.appendChild(csScript)
+        }
+      };
+      if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+        const ytScript = document.createElement('script')
+        ytScript.src = 'https://www.youtube.com/iframe_api'
+        ytScript.async = true
+        document.head.appendChild(ytScript)
+      }
+    }
+
+    return () => { isMounted = false; }
+  }, []);
+
   useEffect(() => {
-    if (!ready || !ytId || !playerDivRef.current) return
+    let localPlayerId: string | null = null;
 
-    // Destroy any previous instance
-    playerRef.current?.destroy()
-    playerRef.current = null
+    if (areScriptsReady && ytId && playerDivRef.current) {
+      const div = playerDivRef.current;
+      div.innerHTML = ''; // reset
 
-    const div = playerDivRef.current
-    // Give the div a fresh unique ID each time
-    div.id = `yt-player-${ytId}-${Date.now()}`
+      const newId = `cs-player-${ytId}-${Date.now()}`
+      div.id = newId;
+      currentPlayerIdRef.current = newId;
+      localPlayerId = newId;
 
-    playerRef.current = new window.YT!.Player(div, {
-      videoId:     ytId,
-      width:       '100%',
-      height:      '100%',
-      playerVars: {
-        playsinline:    1,      // iOS inline
-        fs:             1,      // fullscreen allowed
-        controls:       1,
-        rel:            0,      // no related videos
-        modestbranding: 1,
-        iv_load_policy: 3,      // no annotations
-        disablekb:      0,
-        origin:         typeof window !== 'undefined' ? window.location.origin : '',
-      },
-      events: {
-        onStateChange: (e: { data: number }) => {
-          const S = window.YT?.PlayerState
-          if (!S) return
-          if (e.data === S.PLAYING) { setPlaying(true);  onPlay?.()  }
-          if (e.data === S.PAUSED)  { setPlaying(false); onPause?.() }
-          if (e.data === S.ENDED)   { setPlaying(false); onEnd?.()   }
-        },
-        onError: () => setError('Video is unavailable or restricted.'),
-      },
-    })
+      if (window.csPlayer) {
+        // Add loading spinner inside div natively so it's handled by csPlayer UI logic
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'video-loading-indicator';
+        loadingIndicator.innerHTML = '<div class="spinner"></div><p>Loading video...</p>';
+        div.appendChild(loadingIndicator);
+
+        window.csPlayer.init(newId, {
+          defaultId: ytId,
+          thumbnail: true,
+          theme: "default",
+          loop: false,
+          playerVars: {
+            playsinline: 1,
+            fs: 1,
+            controls: 1,
+            modestbranding: 1,
+            disablekb: 0,
+            rel: 0,
+            showinfo: 0,
+            iv_load_policy: 3
+          }
+        }).then(() => {
+          const indicator = div.querySelector('.video-loading-indicator');
+          if (indicator) div.removeChild(indicator);
+        }).catch(() => {
+          setPlayerError('Failed to load video via csPlayer.')
+          const indicator = div.querySelector('.video-loading-indicator');
+          if (indicator) {
+            indicator.innerHTML = '<p>Error loading video.</p>';
+            setTimeout(() => { if (indicator.parentNode) div.removeChild(indicator); }, 3000)
+          }
+        });
+      }
+    }
 
     return () => {
-      try { playerRef.current?.destroy() } catch {}
-      playerRef.current = null
-    }
-  }, [ready, ytId])
+       const idToClean = localPlayerId || currentPlayerIdRef.current;
+       if (idToClean && window.csPlayer && document.getElementById(idToClean)) {
+         try { window.csPlayer.destroy(idToClean); } catch {}
+       }
+       if (currentPlayerIdRef.current === idToClean) {
+         currentPlayerIdRef.current = null;
+       }
+    };
+  }, [areScriptsReady, ytId]);
 
-  // Block right-click on the player container
   const blockContextMenu = (e: React.MouseEvent) => e.preventDefault()
 
   if (!ytId) return (
@@ -151,38 +178,33 @@ export function SecureVideoPlayer({
       className={cn('relative aspect-video bg-black rounded-2xl overflow-hidden group select-none', className)}
       onContextMenu={blockContextMenu}
     >
-      {/* The actual YouTube player lives in this div */}
-      <div ref={playerDivRef} className="w-full h-full" />
+      <div ref={playerDivRef} className="w-full h-full cs-player" />
 
-      {/* Loading overlay — shown until YT API ready */}
-      {!ready && (
-        <div className="absolute inset-0 bg-[#0d0d2b] flex flex-col items-center justify-center text-white gap-3">
-          <Loader2 className="w-10 h-10 animate-spin text-on-primary-container" />
-          <p className="text-sm text-white/50">Loading player…</p>
-        </div>
-      )}
-
-      {/* Error state */}
-      {error && (
+      {playerError && (
         <div className="absolute inset-0 bg-[#0d0d2b] flex flex-col items-center justify-center text-white/60 gap-2 p-8 text-center">
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{playerError}</p>
         </div>
       )}
 
-      {/* Security watermark — always visible */}
+      {/* Security watermark */}
       <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 text-white/70 text-[10px] font-bold px-2 py-1 rounded-full pointer-events-none select-none z-10">
         <ShieldCheck className="w-3 h-3 text-green-400" />
         Brighter Nepal
       </div>
 
-      {/* Fullscreen button */}
-      <button
-        onClick={() => containerRef.current?.requestFullscreen?.()}
-        title="Fullscreen"
-        className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white p-1.5 rounded-lg z-10 hover:bg-black/80"
-      >
-        <Maximize2 className="w-4 h-4" />
-      </button>
+      <style jsx global>{`
+        .cs-player { width: 100%; height: 100%; aspect-ratio: 16/9; }
+        .video-loading-indicator {
+          position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+          display: flex; flex-direction: column; justify-content: center; align-items: center;
+          background: rgba(0, 0, 0, 0.7); color: white; z-index: 20;
+        }
+        .video-loading-indicator .spinner {
+          width: 50px; height: 50px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
+          border-top-color: white; animation: spin 1s ease-in-out infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   )
 }
