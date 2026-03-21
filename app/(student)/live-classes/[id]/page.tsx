@@ -50,31 +50,31 @@ export default function LiveClassRoomPage() {
     setSending(false)
   }
 
-  if (loading) return <div className="flex items-center justify-center h-screen bg-[#0d0d1a]"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>
+  if (loading) return <div className="flex items-center justify-center h-screen bg-[#f8f9fb]"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-[#0d0d1a] overflow-hidden">
+    <div className="h-screen flex flex-col md:flex-row bg-[#f8f9fb] overflow-hidden">
       {/* Video Side (left on desktop, top on mobile) */}
       <div className="flex flex-col w-full md:flex-1 min-w-0 overflow-y-auto custom-scrollbar">
-        <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-[#0d0d2b] flex-shrink-0 z-20 sticky top-0">
+        <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-white flex-shrink-0 z-20 sticky top-0 shadow-sm">
           <div className="flex items-center gap-4">
-            <button className="md:hidden text-white/70" onClick={() => router.back()}><ArrowLeft className="w-5 h-5"/></button>
-            <span className="flex items-center gap-1.5 bg-error/90 px-2.5 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              <span className="text-white text-[10px] font-black tracking-widest uppercase">Live</span>
+            <button className="md:hidden text-slate-500 hover:text-[#1a1a4e]" onClick={() => router.back()}><ArrowLeft className="w-5 h-5"/></button>
+            <span className="flex items-center gap-1.5 bg-error/10 px-2.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
+              <span className="text-error text-[10px] font-black tracking-widest uppercase">Live</span>
             </span>
             <div>
-              <p className="font-headline font-bold text-white text-sm">{cls?.title ?? 'Live Session'}</p>
-              <p className="text-white/50 text-[10px]">{cls?.teacher ?? '—'} · {cls?.subject ?? '—'}</p>
+              <p className="font-headline font-bold text-[#1a1a4e] text-sm">{cls?.title ?? 'Live Session'}</p>
+              <p className="text-slate-500 text-[10px]">{cls?.teacher ?? '—'} · {cls?.subject ?? '—'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-white/60">
+          <div className="flex items-center gap-3 text-slate-500">
             <Users className="w-4 h-4" />
             <span className="text-sm font-medium">{(cls?.watchers ?? 0).toLocaleString()} watching</span>
           </div>
         </div>
 
-        <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 border-b border-white/5 shadow-2xl">
+        <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 shadow-lg">
           <SecureVideoPlayer
             videoUrl={cls?.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
             title={cls?.title}
@@ -83,18 +83,18 @@ export default function LiveClassRoomPage() {
         </div>
 
         {/* Class Details Area below Video */}
-        <div className="p-6 md:p-8 text-white space-y-4 max-w-4xl">
+        <div className="p-6 md:p-8 text-[#1a1a4e] space-y-4 max-w-4xl">
           <div className="flex flex-wrap items-center gap-3">
-             <span className="bg-white/10 border border-white/10 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{cls?.subject}</span>
-             <span className="text-white/50 text-sm font-medium">{cls?.duration_min} minutes</span>
-             {cls?.scheduled_at && <span className="text-white/50 text-sm font-medium">· {new Date(cls.scheduled_at).toLocaleDateString()}</span>}
+             <span className="bg-[#1a1a4e]/5 border border-[#1a1a4e]/10 text-[#1a1a4e] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{cls?.subject}</span>
+             <span className="text-slate-500 text-sm font-medium">{cls?.duration_min} minutes</span>
+             {cls?.scheduled_at && <span className="text-slate-500 text-sm font-medium">· {new Date(cls.scheduled_at).toLocaleDateString()}</span>}
           </div>
           <h1 className="text-2xl md:text-3xl font-headline font-bold">{cls?.title}</h1>
           <div className="flex items-center gap-3 pt-2">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a1a4e] to-[#2d6a6a] flex items-center justify-center font-bold">{cls?.teacher?.[0] ?? 'T'}</div>
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[#1a1a4e] border border-slate-200">{cls?.teacher?.[0] ?? 'T'}</div>
             <div>
               <p className="font-bold text-sm">Instructor</p>
-              <p className="text-white/70 text-xs">{cls?.teacher}</p>
+              <p className="text-slate-600 text-xs">{cls?.teacher}</p>
             </div>
           </div>
         </div>
