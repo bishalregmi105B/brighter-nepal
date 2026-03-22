@@ -25,9 +25,18 @@ export default function LiveClassRoomPage() {
   useEffect(() => {
     if (!params.id) return
     authService.getMe().then(u => setUser(u)).catch(() => {})
-    liveClassService.getClass(Number(params.id)).then((res) => {
-      setCls(res.data)
-    }).finally(() => setLoading(false))
+
+    const fetchClass = () => {
+      liveClassService.getClass(Number(params.id)).then((res) => {
+        setCls(res.data)
+      }).finally(() => setLoading(false))
+    }
+
+    fetchClass()
+
+    // Poll every 20s so 'scheduled' pages auto-switch to the live player
+    const interval = setInterval(fetchClass, 20_000)
+    return () => clearInterval(interval)
   }, [params.id])
 
   useEffect(() => {
@@ -47,6 +56,55 @@ export default function LiveClassRoomPage() {
   }
 
   if (loading) return <div className="flex items-center justify-center h-screen bg-[#f8f9fb]"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
+
+  // ── Status guards ──────────────────────────────────────────────────────────
+  if (!cls) return (
+    <div className="flex flex-col items-center justify-center h-screen bg-[#f8f9fb] gap-4">
+      <p className="text-2xl font-bold text-[#1a1a4e]">Class not found</p>
+      <button onClick={() => router.back()} className="text-sm text-[#c0622f] font-bold underline">Go back</button>
+    </div>
+  )
+
+  if (cls.status === 'completed') {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-[#f8f9fb] gap-4 p-8 text-center">
+        <span className="text-5xl">🎬</span>
+        <p className="text-2xl font-bold text-[#1a1a4e]">This session has ended</p>
+        <p className="text-slate-500 max-w-sm">The recording will be available shortly in Recorded Lectures.</p>
+        <div className="flex gap-3 mt-2">
+          <button onClick={() => router.push('/recorded-lectures')} className="px-5 py-2.5 bg-[#c0622f] text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all">
+            View Recorded Lectures
+          </button>
+          <button onClick={() => router.back()} className="px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all">
+            Go Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (cls.status === 'scheduled' || cls.status === 'upcoming') {
+    const scheduledTime = cls.scheduled_at ? new Date(cls.scheduled_at) : null
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-[#f8f9fb] gap-4 p-8 text-center">
+        <span className="text-5xl">📅</span>
+        <p className="text-2xl font-bold text-[#1a1a4e]">Class hasn&apos;t started yet</p>
+        <p className="text-slate-500 font-medium">{cls.title}</p>
+        {scheduledTime && (
+          <div className="bg-white rounded-xl px-6 py-4 shadow-sm border border-slate-100 mt-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Scheduled for</p>
+            <p className="text-lg font-bold text-[#1a1a4e]">{scheduledTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p className="text-[#c0622f] font-bold">{scheduledTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
+        )}
+        <p className="text-xs text-slate-400 mt-2">This page will update automatically when the class goes live.</p>
+        <button onClick={() => router.push('/live-classes')} className="mt-2 px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all">
+          ← Back to Live Classes
+        </button>
+      </div>
+    )
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-[#f8f9fb] overflow-hidden">
