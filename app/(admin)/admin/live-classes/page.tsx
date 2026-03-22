@@ -71,6 +71,16 @@ export default function AdminLiveClassesPage() {
     }
   }
 
+  const handleEndLive = async (id: number) => {
+    try {
+      if (!confirm('End this live session? It will be published to Recorded Lectures immediately.')) return
+      await liveClassService.updateClass(id, { status: 'completed' })
+      fetchClasses() // reload list
+    } catch {
+      alert('Failed to end live class')
+    }
+  }
+
   const openEditModal = (session: LiveClass) => {
     setEditId(session.id)
     setEditForm({
@@ -134,7 +144,7 @@ export default function AdminLiveClassesPage() {
             <Link href={`/admin/live-classes/${liveNow.id}/monitor`} className="bg-on-primary-container text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:shadow-lg transition-all">
               <Eye className="w-4 h-4" /> Monitor
             </Link>
-            <button className="bg-error/20 text-error px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-error/30 transition-colors">
+            <button onClick={() => handleEndLive(liveNow.id)} className="bg-error/20 text-error px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-error/30 transition-colors">
               <StopCircle className="w-4 h-4" /> End Session
             </button>
           </div>
@@ -203,9 +213,14 @@ export default function AdminLiveClassesPage() {
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         {session.status === 'live' ? (
-                          <Link href={`/admin/live-classes/${session.id}/monitor`} className="p-2 rounded-lg hover:bg-surface-container-low text-on-primary-container" title="Monitor">
-                            <Eye className="w-4 h-4" />
-                          </Link>
+                          <>
+                            <Link href={`/admin/live-classes/${session.id}/monitor`} className="p-2 rounded-lg hover:bg-surface-container-low text-on-primary-container" title="Monitor">
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            <button onClick={() => handleEndLive(session.id)} className="p-2 rounded-lg hover:bg-error/10 text-error" title="End Session & Publish">
+                              <StopCircle className="w-4 h-4" />
+                            </button>
+                          </>
                         ) : session.status === 'upcoming' ? (
                           <>
                             <button onClick={() => handleStartLive(session.id)} className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f]" title="Start Early / Go Live"><PlayCircle className="w-4 h-4" /></button>
