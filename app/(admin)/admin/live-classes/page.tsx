@@ -1,7 +1,7 @@
 'use client'
 // Admin Live Classes — fetches real data from liveClassService
 import { useEffect, useState } from 'react'
-import { Plus, Video, RadioTower, Calendar, Clock, Users, Eye, Settings, StopCircle, PlayCircle, ChevronRight, Loader2 } from 'lucide-react'
+import { Plus, Video, RadioTower, Calendar, Clock, Users, Eye, Settings, StopCircle, PlayCircle, ChevronRight, Loader2, X } from 'lucide-react'
 import Link from 'next/link'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
 import { cn } from '@/lib/utils/cn'
@@ -23,9 +23,36 @@ export default function AdminLiveClassesPage() {
   const [loading,    setLoading]    = useState(true)
   const [activeTab,  setActiveTab]  = useState<SessionStatus | 'all'>('all')
 
-  useEffect(() => {
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [isCreating,      setIsCreating]      = useState(false)
+  const [createForm,      setCreateForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60 })
+
+  const fetchClasses = () => {
+    setLoading(true)
     liveClassService.getLiveClasses().then((res) => setSessions(res.data?.items ?? [])).finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchClasses()
   }, [])
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsCreating(true)
+    try {
+      await liveClassService.createClass({
+        ...createForm,
+        status: 'upcoming'
+      })
+      setShowCreateModal(false)
+      setCreateForm({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60 })
+      fetchClasses() // reload list
+    } catch (err) {
+      alert('Failed to schedule live class')
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   const displayed  = activeTab === 'all' ? sessions : sessions.filter(s => s.status === activeTab)
   const liveNow    = sessions.find(s => s.status === 'live')
@@ -37,7 +64,7 @@ export default function AdminLiveClassesPage() {
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Live Classes</h2>
           <p className="text-slate-500 font-medium">BridgeCourse Nepal — schedule, broadcast, and monitor IOE/IOM/CSIT sessions.</p>
         </div>
-        <button className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20 self-start md:self-auto">
+        <button onClick={() => setShowCreateModal(true)} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20 self-start md:self-auto">
           <Plus className="w-5 h-5" /> Schedule Class
         </button>
       </div>
@@ -153,6 +180,53 @@ export default function AdminLiveClassesPage() {
           </table>
         )}
       </div>
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-surface-container">
+              <h3 className="font-headline font-bold text-xl text-[#1a1a4e]">Schedule Live Class</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleCreate} className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-outline uppercase">Title</label>
+                <input required value={createForm.title} onChange={e => setCreateForm(prev => ({...prev, title: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="e.g. Kinematics Part 1" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Teacher Name</label>
+                  <input required value={createForm.teacher} onChange={e => setCreateForm(prev => ({...prev, teacher: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="Mr. Someone" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Subject</label>
+                  <select value={createForm.subject} onChange={e => setCreateForm(prev => ({...prev, subject: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white">
+                    {['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'General'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Date & Time</label>
+                  <input type="datetime-local" required value={createForm.scheduled_at} onChange={e => setCreateForm(prev => ({...prev, scheduled_at: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Duration (min)</label>
+                  <input type="number" min={15} required value={createForm.duration_min} onChange={e => setCreateForm(prev => ({...prev, duration_min: parseInt(e.target.value) || 60}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" />
+                </div>
+              </div>
+              
+              <div className="pt-4 flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" disabled={isCreating} className="px-6 py-2.5 bg-[#c0622f] text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-[#c0622f]/20 flex items-center gap-2">
+                  {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Scheduling…</> : 'Schedule Session'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
