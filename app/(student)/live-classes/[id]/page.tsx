@@ -51,8 +51,8 @@ export default function LiveClassRoomPage() {
   return (
     <div className="h-screen flex flex-col md:flex-row bg-[#f8f9fb] overflow-hidden">
       {/* Video Side */}
-      <div className="flex flex-col w-full md:flex-1 min-w-0 overflow-y-auto custom-scrollbar">
-        <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-white flex-shrink-0 z-20 sticky top-0 shadow-sm">
+      <div className="flex flex-col flex-1 min-w-0">
+        <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-white flex-shrink-0 z-20">
           <div className="flex items-center gap-4">
             <button className="md:hidden text-slate-500 hover:text-[#1a1a4e]" onClick={() => router.back()}><ArrowLeft className="w-5 h-5"/></button>
             <span className="flex items-center gap-1.5 bg-error/10 px-2.5 py-1 rounded-full">
@@ -76,27 +76,30 @@ export default function LiveClassRoomPage() {
           </div>
         </div>
 
-        <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 shadow-lg">
+        <div className="flex-1 bg-black flex items-center justify-center relative min-h-0">
           <SecureVideoPlayer
-            videoUrl={cls?.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
+            videoUrl={cls?.stream_url ?? ''}
             title={cls?.title}
-            className="w-full h-full rounded-none"
+            className="w-full h-full rounded-none aspect-auto"
           />
         </div>
 
         {/* Class Details */}
-        <div className="p-6 md:p-8 text-[#1a1a4e] space-y-4 max-w-4xl">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="bg-[#1a1a4e]/5 border border-[#1a1a4e]/10 text-[#1a1a4e] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{cls?.subject}</span>
-            <span className="text-slate-500 text-sm font-medium">{cls?.duration_min} minutes</span>
-            {cls?.scheduled_at && <span className="text-slate-500 text-sm font-medium">· {new Date(cls.scheduled_at).toLocaleDateString()}</span>}
+        <div className="p-4 bg-white border-t border-surface-container/10 flex-shrink-0 flex items-center justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-3 mb-1">
+              <span className="bg-[#1a1a4e]/5 text-[#1a1a4e] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{cls?.subject}</span>
+              <span className="text-slate-500 text-xs font-medium">{cls?.duration_min} minutes</span>
+            </div>
+            <h1 className="text-lg font-headline font-bold text-[#1a1a4e]">{cls?.title}</h1>
           </div>
-          <h1 className="text-2xl md:text-3xl font-headline font-bold">{cls?.title}</h1>
-          <div className="flex items-center gap-3 pt-2">
-            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[#1a1a4e] border border-slate-200">{cls?.teacher?.[0] ?? 'T'}</div>
+          <div className="flex items-center gap-2 text-right">
             <div>
-              <p className="font-bold text-sm">Instructor</p>
-              <p className="text-slate-600 text-xs">{cls?.teacher}</p>
+              <p className="font-bold text-xs text-[#1a1a4e]">Instructor</p>
+              <p className="text-slate-500 text-[10px]">{cls?.teacher}</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[#1a1a4e] text-xs border border-slate-200">
+              {cls?.teacher?.[0] ?? 'T'}
             </div>
           </div>
         </div>

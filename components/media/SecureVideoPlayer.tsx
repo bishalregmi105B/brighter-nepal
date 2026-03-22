@@ -191,7 +191,7 @@ export function SecureVideoPlayer({
       </div>
 
       <style jsx global>{`
-        .cs-player { width: 100%; height: 100%; aspect-ratio: 16/9; }
+        .cs-player { width: 100%; height: 100%; }
         .video-loading-indicator {
           position: absolute; top: 0; left: 0; width: 100%; height: 100%;
           display: flex; flex-direction: column; justify-content: center; align-items: center;

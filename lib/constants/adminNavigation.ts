@@ -32,7 +32,6 @@ export const adminNavItems: AdminNavItem[] = [
     label: 'Users',
     icon:  Users,
     subItems: [
-      { href: '/admin/users',               label: 'All Users' },
       { href: '/admin/users?tab=trial',     label: 'Trial' },
       { href: '/admin/users?tab=paid',      label: 'Paid' },
       { href: '/admin/users/bulk-generate', label: 'Bulk Generate' },

@@ -88,9 +88,9 @@ export default function LiveClassMonitorPage() {
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 bg-black flex items-center justify-center relative">
           <SecureVideoPlayer
-            videoUrl={cls?.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
+            videoUrl={cls?.stream_url ?? ''}
             title={cls?.title}
-            className="w-full h-full rounded-none"
+            className="w-full h-full rounded-none aspect-auto"
           />
           <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-4 pointer-events-none">
             {[

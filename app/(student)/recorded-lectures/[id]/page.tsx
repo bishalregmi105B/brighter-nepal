@@ -105,7 +105,7 @@ export default function RecordedLectureVideoPage() {
         {playing ? (
           <div className="w-full aspect-video bg-black flex items-center justify-center relative flex-shrink-0 shadow-lg lg:rounded-b-2xl overflow-hidden">
             <SecureVideoPlayer
-              videoUrl={lecture.stream_url ?? 'https://www.youtube.com/@BRIGHTERNEPAL1'}
+              videoUrl={lecture.stream_url ?? ''}
               title={lecture.title}
               className="w-full h-full rounded-none"
             />
