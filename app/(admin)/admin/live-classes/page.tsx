@@ -25,7 +25,7 @@ export default function AdminLiveClassesPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isCreating,      setIsCreating]      = useState(false)
-  const [createForm,      setCreateForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60 })
+  const [createForm,      setCreateForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '' })
 
   const fetchClasses = () => {
     setLoading(true)
@@ -45,7 +45,7 @@ export default function AdminLiveClassesPage() {
         status: 'upcoming'
       })
       setShowCreateModal(false)
-      setCreateForm({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60 })
+      setCreateForm({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '' })
       fetchClasses() // reload list
     } catch (err) {
       alert('Failed to schedule live class')
@@ -215,6 +215,10 @@ export default function AdminLiveClassesPage() {
                   <label className="text-xs font-bold text-outline uppercase">Duration (min)</label>
                   <input type="number" min={15} required value={createForm.duration_min} onChange={e => setCreateForm(prev => ({...prev, duration_min: parseInt(e.target.value) || 60}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-outline uppercase flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Stream URL (YouTube)</label>
+                <input value={createForm.stream_url} onChange={e => setCreateForm(prev => ({...prev, stream_url: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="https://youtube.com/watch?v=..." />
               </div>
               
               <div className="pt-4 flex items-center justify-end gap-3">
