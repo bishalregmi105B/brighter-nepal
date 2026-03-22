@@ -1,8 +1,9 @@
 'use client'
 // Admin Live Classes — fetches real data from liveClassService
 import { useEffect, useState } from 'react'
-import { Plus, Video, RadioTower, Calendar, Clock, Users, Eye, Settings, StopCircle, PlayCircle, ChevronRight, Loader2, X } from 'lucide-react'
+import { Plus, Video, RadioTower, Calendar, Clock, Users, Eye, Settings, StopCircle, PlayCircle, ChevronRight, Loader2, X, Edit } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
 import { cn } from '@/lib/utils/cn'
 
@@ -22,10 +23,16 @@ export default function AdminLiveClassesPage() {
   const [sessions,   setSessions]   = useState<LiveClass[]>([])
   const [loading,    setLoading]    = useState(true)
   const [activeTab,  setActiveTab]  = useState<SessionStatus | 'all'>('all')
+  const router = useRouter()
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isCreating,      setIsCreating]      = useState(false)
   const [createForm,      setCreateForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '' })
+
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [isEditing,     setIsEditing]     = useState(false)
+  const [editId,        setEditId]        = useState<number | null>(null)
+  const [editForm,      setEditForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '' })
 
   const fetchClasses = () => {
     setLoading(true)
@@ -51,6 +58,44 @@ export default function AdminLiveClassesPage() {
       alert('Failed to schedule live class')
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  const handleStartLive = async (id: number) => {
+    try {
+      if (!confirm('Start this class right now? Students will be notified.')) return
+      await liveClassService.updateClass(id, { status: 'live' })
+      router.push(`/admin/live-classes/${id}/monitor`)
+    } catch {
+      alert('Failed to start live class')
+    }
+  }
+
+  const openEditModal = (session: LiveClass) => {
+    setEditId(session.id)
+    setEditForm({
+      title: session.title,
+      teacher: session.teacher,
+      subject: session.subject,
+      scheduled_at: session.scheduled_at ? new Date(session.scheduled_at).toISOString().slice(0, 16) : '',
+      duration_min: session.duration_min,
+      stream_url: session.stream_url ?? ''
+    })
+    setShowEditModal(true)
+  }
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editId) return
+    setIsEditing(true)
+    try {
+      await liveClassService.updateClass(editId, editForm)
+      setShowEditModal(false)
+      fetchClasses() // reload list
+    } catch (err) {
+      alert('Failed to update live class')
+    } finally {
+      setIsEditing(false)
     }
   }
 
@@ -163,8 +208,8 @@ export default function AdminLiveClassesPage() {
                           </Link>
                         ) : session.status === 'upcoming' ? (
                           <>
-                            <button className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f]" title="Start Early"><PlayCircle className="w-4 h-4" /></button>
-                            <button className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f]" title="Edit"><Settings className="w-4 h-4" /></button>
+                            <button onClick={() => handleStartLive(session.id)} className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f]" title="Start Early / Go Live"><PlayCircle className="w-4 h-4" /></button>
+                            <button onClick={() => openEditModal(session)} className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f]" title="Edit Class Details"><Settings className="w-4 h-4" /></button>
                           </>
                         ) : (
                           <Link href={`/admin/live-classes/${session.id}/monitor`} className="flex items-center gap-1 text-xs font-bold text-on-primary-container hover:underline">
@@ -225,6 +270,57 @@ export default function AdminLiveClassesPage() {
                 <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
                 <button type="submit" disabled={isCreating} className="px-6 py-2.5 bg-[#c0622f] text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-[#c0622f]/20 flex items-center gap-2">
                   {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Scheduling…</> : 'Schedule Session'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-surface-container">
+              <h3 className="font-headline font-bold text-xl text-[#1a1a4e]">Edit Live Class</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleEdit} className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-outline uppercase">Title</label>
+                <input required value={editForm.title} onChange={e => setEditForm(prev => ({...prev, title: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="e.g. Kinematics Part 1" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Teacher Name</label>
+                  <input required value={editForm.teacher} onChange={e => setEditForm(prev => ({...prev, teacher: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="Mr. Someone" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Subject</label>
+                  <select value={editForm.subject} onChange={e => setEditForm(prev => ({...prev, subject: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white">
+                    {['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'General'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Date & Time</label>
+                  <input type="datetime-local" required value={editForm.scheduled_at} onChange={e => setEditForm(prev => ({...prev, scheduled_at: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase">Duration (min)</label>
+                  <input type="number" min={15} required value={editForm.duration_min} onChange={e => setEditForm(prev => ({...prev, duration_min: parseInt(e.target.value) || 60}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-outline uppercase flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Stream URL (YouTube)</label>
+                <input value={editForm.stream_url} onChange={e => setEditForm(prev => ({...prev, stream_url: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="https://youtube.com/watch?v=..." />
+              </div>
+              
+              <div className="pt-4 flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" disabled={isEditing} className="px-6 py-2.5 bg-[#c0622f] text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-[#c0622f]/20 flex items-center gap-2">
+                  {isEditing ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><Edit className="w-4 h-4" /> Save Changes</>}
                 </button>
               </div>
             </form>

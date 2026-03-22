@@ -6,6 +6,7 @@ import { ArrowLeft, Users, MessageSquare, Hand, Send, StopCircle, Mic, MicOff, V
 import Link from 'next/link'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
 import { groupService, type GroupMessage } from '@/services/groupService'
+import { SecureVideoPlayer } from '@/components/media/SecureVideoPlayer'
 import { cn } from '@/lib/utils/cn'
 
 export default function LiveClassMonitorPage() {
@@ -85,12 +86,13 @@ export default function LiveClassMonitorPage() {
       </div>
 
       <div className="flex-1 flex min-h-0">
-        <div className="flex-1 bg-gradient-to-br from-[#1a1a4e]/80 to-[#074f4f]/60 flex items-center justify-center relative">
-          <div className="text-center text-white/40">
-            <Video className="w-20 h-20 mx-auto mb-4" />
-            <p className="font-medium">Admin broadcast preview</p>
-          </div>
-          <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-4">
+        <div className="flex-1 bg-black flex items-center justify-center relative">
+          <SecureVideoPlayer
+            videoUrl={cls?.stream_url ?? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
+            title={cls?.title}
+            className="w-full h-full rounded-none"
+          />
+          <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-4 pointer-events-none">
             {[
               { label: 'Watching',      value: (cls?.watchers ?? 0).toLocaleString() },
               { label: 'Chat Messages', value: chat.length.toString()                },
