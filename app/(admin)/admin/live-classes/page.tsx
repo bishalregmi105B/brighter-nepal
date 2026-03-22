@@ -27,7 +27,7 @@ export default function AdminLiveClassesPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isCreating,      setIsCreating]      = useState(false)
-  const [createForm,      setCreateForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '' })
+  const [createForm,      setCreateForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '', status: 'scheduled' })
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [isEditing,     setIsEditing]     = useState(false)
@@ -47,12 +47,9 @@ export default function AdminLiveClassesPage() {
     e.preventDefault()
     setIsCreating(true)
     try {
-      await liveClassService.createClass({
-        ...createForm,
-        status: 'upcoming'
-      })
+      await liveClassService.createClass(createForm)
       setShowCreateModal(false)
-      setCreateForm({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '' })
+      setCreateForm({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '', status: 'scheduled' })
       fetchClasses() // reload list
     } catch (err) {
       alert('Failed to schedule live class')
@@ -279,6 +276,14 @@ export default function AdminLiveClassesPage() {
               <div>
                 <label className="text-xs font-bold text-outline uppercase flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Stream URL (YouTube)</label>
                 <input value={createForm.stream_url} onChange={e => setCreateForm(prev => ({...prev, stream_url: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="https://youtube.com/watch?v=..." />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-outline uppercase">Status</label>
+                <select value={createForm.status} onChange={e => setCreateForm(prev => ({...prev, status: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white">
+                  <option value="scheduled">Scheduled (upcoming)</option>
+                  <option value="live">Live Now</option>
+                  <option value="completed">Completed (recording)</option>
+                </select>
               </div>
               
               <div className="pt-4 flex items-center justify-end gap-3">
