@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Users, TrendingUp, BarChart2, ChevronRight, Loader2, Zap, CheckCircle2, Clock } from 'lucide-react'
 import { weeklyTestService, type WeeklyTest } from '@/services/weeklyTestService'
 import { cn } from '@/lib/utils/cn'
+import { toStudentGoogleFormUrl } from '@/lib/utils/googleForms'
 
 const chartBars = [12, 20, 24, 16, 32, 28]
 
@@ -22,6 +23,7 @@ export default function WeeklyTestsPage() {
   const liveTest      = tests.find((t) => t.status === 'live')
   const scheduledTests = tests.filter((t) => t.status === 'scheduled')
   const pastTests     = tests.filter((t) => t.status === 'completed')
+  const liveTestFormUrl = toStudentGoogleFormUrl(liveTest?.forms_url)
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
   if (error)   return <div className="p-10 text-center text-red-500 font-medium">{error}</div>
@@ -43,9 +45,9 @@ export default function WeeklyTestsPage() {
             <p className="text-lg opacity-80 font-medium">
               {liveTest.duration_min} mins · {liveTest.question_count} questions · {liveTest.subject}
             </p>
-            {liveTest.forms_url ? (
+            {liveTestFormUrl ? (
               <a
-                href={liveTest.forms_url}
+                href={liveTestFormUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block bg-on-primary-container text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-lg shadow-on-primary-container/20"

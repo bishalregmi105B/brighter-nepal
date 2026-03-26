@@ -10,10 +10,12 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Clock, ChevronLeft, ChevronRight, Flag, CheckSquare, Loader2, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Clock, ChevronLeft, ChevronRight, CheckSquare, Loader2, AlertCircle, ExternalLink } from 'lucide-react'
 import { weeklyTestService, type WeeklyTest, type Question } from '@/services/weeklyTestService'
 import { cn } from '@/lib/utils/cn'
 import ReactMarkdown from 'react-markdown'
+import { toStudentGoogleFormUrl } from '@/lib/utils/googleForms'
 
 type AnswerMap = Record<number, number>  // questionId → chosen option index
 
@@ -36,7 +38,9 @@ export default function WeeklyTestExamPage() {
   const [timeLeft,  setTimeLeft]  = useState(0)
   const [submitted, setSubmitted] = useState(false)
   const [submitting,setSubmitting]= useState(false)
+  const [formsUrl,   setFormsUrl]  = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const submitRef = useRef<() => void>(() => {})
 
   // Load test
   useEffect(() => {
@@ -51,24 +55,16 @@ export default function WeeklyTestExamPage() {
           return
         }
         setTest(t)
-        setQuestions(t.questions ?? [])
-        setTimeLeft((t.duration_min ?? 60) * 60)
+        const externalForm = toStudentGoogleFormUrl(t.forms_url)
+        setFormsUrl(externalForm)
+        if (!externalForm) {
+          setQuestions(t.questions ?? [])
+          setTimeLeft((t.duration_min ?? 60) * 60)
+        }
       })
       .catch(() => setError('Failed to load test.'))
       .finally(() => setLoading(false))
   }, [params.id, router])
-
-  // Countdown timer
-  useEffect(() => {
-    if (!test || submitted) return
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) { handleSubmit(); return 0 }
-        return prev - 1
-      })
-    }, 1000)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [test, submitted])
 
   const handleSubmit = useCallback(async () => {
     if (submitted || submitting) return
@@ -85,8 +81,25 @@ export default function WeeklyTestExamPage() {
     router.push(`/weekly-tests/${params.id}`)
   }, [submitted, submitting, questions, answers, params.id, router])
 
+  useEffect(() => {
+    submitRef.current = () => {
+      void handleSubmit()
+    }
+  }, [handleSubmit])
+
+  // Countdown timer
+  useEffect(() => {
+    if (!test || submitted || formsUrl || questions.length === 0) return
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) { submitRef.current(); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [test, submitted, formsUrl, questions.length])
+
   const answered  = Object.keys(answers).length
-  const flagged   = 0  // could track flagged questions; kept simple for now
   const timeWarn  = timeLeft < 120
 
   if (loading) return (
@@ -94,6 +107,31 @@ export default function WeeklyTestExamPage() {
       <Loader2 className="w-10 h-10 text-on-primary-container animate-spin" />
     </div>
   )
+
+  if (formsUrl && test) {
+    return (
+      <div className="fixed inset-0 bg-[#f8f9fb] flex flex-col items-center justify-center gap-6 p-8 text-center">
+        <div className="max-w-xl space-y-4">
+          <h1 className="text-3xl font-headline font-black text-[#1a1a4e]">{test.title}</h1>
+          <p className="text-slate-500">This weekly test is hosted in Google Forms. The internal exam screen is disabled for this test, so open the linked form to continue.</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3">
+          <a
+            href={formsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-on-primary-container text-white rounded-xl font-bold hover:opacity-90 transition-colors inline-flex items-center gap-2"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Open Google Form
+          </a>
+          <Link href={`/weekly-tests/${params.id}`} className="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors">
+            Back to Weekly Test
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (error || !test || questions.length === 0) return (
     <div className="fixed inset-0 bg-[#f8f9fb] flex flex-col items-center justify-center gap-4 text-slate-800 p-8 text-center">

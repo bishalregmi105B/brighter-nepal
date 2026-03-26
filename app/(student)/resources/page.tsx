@@ -3,8 +3,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Search, BookOpen, Video, FileText, Eye, X, Loader2, Globe, FileArchive } from 'lucide-react'
 import { resourceService, type Resource } from '@/services/resourceService'
+import { subjectService } from '@/services/subjectService'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
+import { DEFAULT_SUBJECTS, mergeSubjectOptions } from '@/lib/utils/subjects'
 
 const formatBadge: Record<string, string> = {
   pdf:   'bg-red-100 text-red-600',
@@ -32,10 +34,10 @@ export default function ResourcesPage() {
 
   // Load distinct subjects from API
   useEffect(() => {
-    resourceService.getSubjects()
+    subjectService.getSubjects()
       .then((res) => {
         const subs = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
-        setSubjects(subs)
+        setSubjects(mergeSubjectOptions(subs, DEFAULT_SUBJECTS))
       })
       .catch(() => {}) // graceful fail
   }, [])

@@ -75,6 +75,7 @@ export default function RecordedLectureVideoPage() {
   const scheduledDate = lecture.scheduled_at
     ? new Date(lecture.scheduled_at).toLocaleDateString('en-NP', { day: 'numeric', month: 'long', year: 'numeric' })
     : '—'
+  const durationLabel = lecture.duration_min && lecture.duration_min > 0 ? `${lecture.duration_min} mins` : 'Duration not set'
 
   return (
     <div className="h-screen bg-[#f8f9fb] overflow-y-auto custom-scrollbar flex flex-col">
@@ -146,7 +147,7 @@ export default function RecordedLectureVideoPage() {
             <div className="space-y-6 text-[#1a1a4e]">
               <div className="flex flex-wrap items-center gap-3">
                 <span className={cn('px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest', badgeClass)}>{lecture.subject}</span>
-                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Clock className="w-4 h-4" /> {lecture.duration_min} mins</span>
+                <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Clock className="w-4 h-4" /> {durationLabel}</span>
                 <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Recorded on {scheduledDate}</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-headline font-bold leading-tight">{lecture.title}</h1>

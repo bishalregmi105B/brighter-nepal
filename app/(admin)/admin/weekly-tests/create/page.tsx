@@ -1,20 +1,21 @@
 'use client'
 // Admin Weekly Test Create — full form to schedule a new weekly test
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, Clock, BookOpen, CalendarDays, Loader2, Link2 } from 'lucide-react'
 import Link from 'next/link'
 import { weeklyTestService } from '@/services/weeklyTestService'
 import { cn } from '@/lib/utils/cn'
-
-const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'General']
+import { subjectService } from '@/services/subjectService'
+import { DEFAULT_SUBJECTS, getDefaultSubject, mergeSubjectOptions } from '@/lib/utils/subjects'
 
 interface Question { id: string; text: string; options: string[]; answer: number }
 
 export default function CreateWeeklyTestPage() {
   const router = useRouter()
+  const [dbSubjects, setDbSubjects] = useState<string[]>([])
   const [title,     setTitle]     = useState('')
-  const [subject,   setSubject]   = useState(SUBJECTS[0])
+  const [subject,   setSubject]   = useState('')
   const [duration,  setDuration]  = useState('60')
   const [schedDate, setSchedDate] = useState('')
   const [schedTime, setSchedTime] = useState('')
@@ -38,6 +39,27 @@ export default function CreateWeeklyTestPage() {
 
   const setAnswer = (qid: string, idx: number) =>
     setQuestions((prev) => prev.map((q) => q.id === qid ? { ...q, answer: idx } : q))
+
+  useEffect(() => {
+    subjectService.getSubjects()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
+        setDbSubjects(list)
+      })
+      .catch(() => setDbSubjects([]))
+  }, [])
+
+  const subjectOptions = useMemo(
+    () => mergeSubjectOptions(dbSubjects, DEFAULT_SUBJECTS, [subject]),
+    [dbSubjects, subject]
+  )
+  const defaultSubject = getDefaultSubject(subjectOptions, DEFAULT_SUBJECTS)
+
+  useEffect(() => {
+    if (!subject && defaultSubject) {
+      setSubject(defaultSubject)
+    }
+  }, [defaultSubject, subject])
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8">
@@ -68,13 +90,14 @@ export default function CreateWeeklyTestPage() {
           </div>
           <div>
             <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><BookOpen className="w-3 h-3" /> Subject</label>
-            <select
+            <input
+              required
+              list="weekly-test-subject-options"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
-            >
-              {SUBJECTS.map((s) => <option key={s}>{s}</option>)}
-            </select>
+              placeholder="e.g. Physics"
+            />
           </div>
           <div>
             <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Clock className="w-3 h-3" /> Duration (minutes)</label>
@@ -104,7 +127,7 @@ export default function CreateWeeklyTestPage() {
               placeholder="https://docs.google.com/forms/d/..."
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
             />
-            <p className="text-[11px] text-slate-400 mt-1.5">If provided, &#34;Start Test Now&#34; will open this form in a new tab for students.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">If provided, &#34;Start Test Now&#34; will open this form in a new tab for students. For import/sync, use editor URL: /forms/d/&lt;id&gt;/edit (not /forms/d/e/.../viewform).</p>
           </div>
           <div>
             <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Start Time</label>
@@ -196,6 +219,9 @@ export default function CreateWeeklyTestPage() {
           {saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Schedule Test'}
         </button>
       </div>
+      <datalist id="weekly-test-subject-options">
+        {subjectOptions.map((item) => <option key={item} value={item} />)}
+      </datalist>
     </div>
   )
 }

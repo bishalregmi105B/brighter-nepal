@@ -1,11 +1,14 @@
 'use client'
 // Admin Live Classes — fetches real data from liveClassService
 import { useEffect, useState } from 'react'
-import { Plus, Video, RadioTower, Calendar, Clock, Users, Eye, Settings, StopCircle, PlayCircle, ChevronRight, Loader2, X, Edit } from 'lucide-react'
+import { Plus, Video, RadioTower, Calendar, Clock, Users, Eye, Settings, StopCircle, PlayCircle, ChevronRight, Loader2, X, Edit, Film } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
+import { authService, type AuthUser } from '@/services/authService'
+import { subjectService } from '@/services/subjectService'
 import { cn } from '@/lib/utils/cn'
+import { DEFAULT_SUBJECTS, getDefaultSubject, mergeSubjectOptions } from '@/lib/utils/subjects'
 
 type SessionStatus = 'live' | 'upcoming' | 'completed' | 'cancelled'
 
@@ -21,18 +24,22 @@ const STATUS_TABS: (SessionStatus | 'all')[] = ['all', 'live', 'upcoming', 'comp
 
 export default function AdminLiveClassesPage() {
   const [sessions,   setSessions]   = useState<LiveClass[]>([])
+  const [subjectOptions, setSubjectOptions] = useState<string[]>(DEFAULT_SUBJECTS)
   const [loading,    setLoading]    = useState(true)
   const [activeTab,  setActiveTab]  = useState<SessionStatus | 'all'>('all')
+  const [adminUser,  setAdminUser]  = useState<AuthUser | null>(null)
   const router = useRouter()
+  const defaultSubject = getDefaultSubject(subjectOptions, DEFAULT_SUBJECTS)
 
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createMode,      setCreateMode]      = useState<'live' | 'recorded'>('live')
   const [isCreating,      setIsCreating]      = useState(false)
-  const [createForm,      setCreateForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '', status: 'scheduled' })
+  const [createForm,      setCreateForm]      = useState({ title: '', subject: '', stream_url: '' })
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [isEditing,     setIsEditing]     = useState(false)
   const [editId,        setEditId]        = useState<number | null>(null)
-  const [editForm,      setEditForm]      = useState({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '' })
+  const [editForm,      setEditForm]      = useState({ title: '', teacher: '', subject: '', scheduled_at: '', duration_min: 60, stream_url: '' })
 
   const fetchClasses = () => {
     setLoading(true)
@@ -40,19 +47,59 @@ export default function AdminLiveClassesPage() {
   }
 
   useEffect(() => {
+    authService.getMe().then(setAdminUser).catch(() => {})
     fetchClasses()
   }, [])
+
+  useEffect(() => {
+    subjectService.getSubjects()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
+        setSubjectOptions(mergeSubjectOptions(list, sessions.map((session) => session.subject), DEFAULT_SUBJECTS))
+      })
+      .catch(() => setSubjectOptions((prev) => mergeSubjectOptions(prev, sessions.map((session) => session.subject), DEFAULT_SUBJECTS)))
+  }, [sessions])
+
+  const formatNowForApi = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  }
+
+  const openCreateModal = (mode: 'live' | 'recorded') => {
+    setCreateMode(mode)
+    setCreateForm({ title: '', subject: defaultSubject, stream_url: '' })
+    setShowCreateModal(true)
+  }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsCreating(true)
     try {
-      await liveClassService.createClass(createForm)
+      const res = await liveClassService.createClass({
+        title: createForm.title.trim(),
+        subject: createForm.subject.trim() || defaultSubject,
+        stream_url: createForm.stream_url.trim(),
+        teacher: adminUser?.name || 'Admin',
+        scheduled_at: formatNowForApi(),
+        duration_min: 0,
+        status: createMode === 'live' ? 'live' : 'completed',
+      })
       setShowCreateModal(false)
-      setCreateForm({ title: '', teacher: '', subject: 'Physics', scheduled_at: '', duration_min: 60, stream_url: '', status: 'scheduled' })
-      fetchClasses() // reload list
+      setCreateForm({ title: '', subject: defaultSubject, stream_url: '' })
+      if (createMode === 'live') {
+        router.push(`/admin/live-classes/${res.data.id}/monitor`)
+      } else {
+        setActiveTab('completed')
+        fetchClasses()
+      }
     } catch (err) {
-      alert('Failed to schedule live class')
+      alert(createMode === 'live' ? 'Failed to create live class' : 'Failed to add recorded lecture')
     } finally {
       setIsCreating(false)
     }
@@ -83,7 +130,7 @@ export default function AdminLiveClassesPage() {
     setEditForm({
       title: session.title,
       teacher: session.teacher,
-      subject: session.subject,
+      subject: session.subject || defaultSubject,
       scheduled_at: session.scheduled_at ? new Date(session.scheduled_at).toISOString().slice(0, 16) : '',
       duration_min: session.duration_min,
       stream_url: session.stream_url ?? ''
@@ -96,7 +143,10 @@ export default function AdminLiveClassesPage() {
     if (!editId) return
     setIsEditing(true)
     try {
-      await liveClassService.updateClass(editId, editForm)
+      await liveClassService.updateClass(editId, {
+        ...editForm,
+        subject: editForm.subject.trim() || defaultSubject,
+      })
       setShowEditModal(false)
       fetchClasses() // reload list
     } catch (err) {
@@ -106,7 +156,14 @@ export default function AdminLiveClassesPage() {
     }
   }
 
-  const displayed  = activeTab === 'all' ? sessions : sessions.filter(s => s.status === activeTab)
+  const isUpcoming = (session: LiveClass) => session.status === 'upcoming' || session.status === 'scheduled'
+  const formatDuration = (minutes?: number | null) => minutes && minutes > 0 ? `${minutes}min` : '—'
+
+  const displayed  = activeTab === 'all'
+    ? sessions
+    : activeTab === 'upcoming'
+      ? sessions.filter(isUpcoming)
+      : sessions.filter(s => s.status === activeTab)
   const liveNow    = sessions.find(s => s.status === 'live')
 
   return (
@@ -116,9 +173,14 @@ export default function AdminLiveClassesPage() {
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Live Classes</h2>
           <p className="text-slate-500 font-medium">BridgeCourse Nepal — schedule, broadcast, and monitor IOE/IOM/CSIT sessions.</p>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20 self-start md:self-auto">
-          <Plus className="w-5 h-5" /> Schedule Class
-        </button>
+        <div className="flex flex-wrap gap-3 self-start md:self-auto">
+          <button onClick={() => openCreateModal('live')} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
+            <Plus className="w-5 h-5" /> Add Live Class
+          </button>
+          <button onClick={() => openCreateModal('recorded')} className="bg-[#1a1a4e] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#1a1a4e]/20">
+            <Film className="w-5 h-5" /> Add Recorded Lecture
+          </button>
+        </div>
       </div>
 
       {/* Live now banner */}
@@ -150,10 +212,10 @@ export default function AdminLiveClassesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-        {[
+          {[
           { label: 'Total Sessions', value: sessions.length.toString(),                                              color: 'text-[#1a1a4e]'              },
           { label: 'Live Now',       value: sessions.filter(s=>s.status==='live').length.toString(),                 color: 'text-error'                  },
-          { label: 'Scheduled',      value: sessions.filter(s=>s.status==='upcoming').length.toString(),             color: 'text-on-secondary-container' },
+          { label: 'Scheduled',      value: sessions.filter(isUpcoming).length.toString(),                            color: 'text-on-secondary-container' },
           { label: 'Total Viewers',  value: sessions.reduce((sum,s)=>sum+(s.watchers??0),0).toLocaleString(),        color: 'text-on-tertiary-container'  },
         ].map((s) => (
           <div key={s.label} className="bg-white p-5 rounded-xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] text-center">
@@ -201,7 +263,7 @@ export default function AdminLiveClassesPage() {
                       <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" />{session.scheduled_at?.slice(0,10)}</span>
                       <span className="flex items-center gap-1.5 text-xs text-outline mt-0.5"><Clock className="w-3 h-3" />{session.scheduled_at ? new Date(session.scheduled_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—'}</span>
                     </td>
-                    <td className="px-6 py-5 text-sm text-slate-600">{session.duration_min}min</td>
+                    <td className="px-6 py-5 text-sm text-slate-600">{formatDuration(session.duration_min)}</td>
                     <td className="px-6 py-5">
                       <span className={cn('inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase', s.bg, s.text)}>
                         <Icon className="w-3 h-3" /> {s.label}
@@ -218,7 +280,7 @@ export default function AdminLiveClassesPage() {
                               <StopCircle className="w-4 h-4" />
                             </button>
                           </>
-                        ) : session.status === 'upcoming' ? (
+                        ) : isUpcoming(session) ? (
                           <>
                             <button onClick={() => handleStartLive(session.id)} className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f]" title="Start Early / Go Live"><PlayCircle className="w-4 h-4" /></button>
                             <button onClick={() => openEditModal(session)} className="p-2 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-[#c0622f]" title="Edit Class Details"><Settings className="w-4 h-4" /></button>
@@ -243,53 +305,39 @@ export default function AdminLiveClassesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-surface-container">
-              <h3 className="font-headline font-bold text-xl text-[#1a1a4e]">Schedule Live Class</h3>
+              <div>
+                <h3 className="font-headline font-bold text-xl text-[#1a1a4e]">{createMode === 'live' ? 'Add Live Class' : 'Add Recorded Lecture'}</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Teacher will be set to {adminUser?.name || 'current admin'} and time will use now.
+                </p>
+              </div>
               <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleCreate} className="p-6 space-y-4">
               <div>
                 <label className="text-xs font-bold text-outline uppercase">Title</label>
-                <input required value={createForm.title} onChange={e => setCreateForm(prev => ({...prev, title: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="e.g. Kinematics Part 1" />
+                <input required value={createForm.title} onChange={e => setCreateForm(prev => ({...prev, title: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder={createMode === 'live' ? 'e.g. Physics Live Marathon' : 'e.g. Integration Recorded Lecture'} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-outline uppercase">Teacher Name</label>
-                  <input required value={createForm.teacher} onChange={e => setCreateForm(prev => ({...prev, teacher: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="Mr. Someone" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-outline uppercase">Subject</label>
-                  <select value={createForm.subject} onChange={e => setCreateForm(prev => ({...prev, subject: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white">
-                    {['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'General'].map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-outline uppercase">Date & Time</label>
-                  <input type="datetime-local" required value={createForm.scheduled_at} onChange={e => setCreateForm(prev => ({...prev, scheduled_at: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-outline uppercase">Duration (min)</label>
-                  <input type="number" min={15} required value={createForm.duration_min} onChange={e => setCreateForm(prev => ({...prev, duration_min: parseInt(e.target.value) || 60}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" />
-                </div>
+              <div>
+                <label className="text-xs font-bold text-outline uppercase">Subject</label>
+                <input
+                  required
+                  list="live-class-subject-options"
+                  value={createForm.subject}
+                  onChange={e => setCreateForm(prev => ({...prev, subject: e.target.value}))}
+                  className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white"
+                  placeholder="e.g. Physics"
+                />
               </div>
               <div>
                 <label className="text-xs font-bold text-outline uppercase flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Stream URL (YouTube)</label>
-                <input value={createForm.stream_url} onChange={e => setCreateForm(prev => ({...prev, stream_url: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="https://youtube.com/watch?v=..." />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-outline uppercase">Status</label>
-                <select value={createForm.status} onChange={e => setCreateForm(prev => ({...prev, status: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white">
-                  <option value="scheduled">Scheduled (upcoming)</option>
-                  <option value="live">Live Now</option>
-                  <option value="completed">Completed (recording)</option>
-                </select>
+                <input required value={createForm.stream_url} onChange={e => setCreateForm(prev => ({...prev, stream_url: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none" placeholder="https://youtube.com/watch?v=..." />
               </div>
               
               <div className="pt-4 flex items-center justify-end gap-3">
                 <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
                 <button type="submit" disabled={isCreating} className="px-6 py-2.5 bg-[#c0622f] text-white rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-[#c0622f]/20 flex items-center gap-2">
-                  {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Scheduling…</> : 'Schedule Session'}
+                  {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : createMode === 'live' ? 'Create Live Class' : 'Add Recorded Lecture'}
                 </button>
               </div>
             </form>
@@ -317,9 +365,14 @@ export default function AdminLiveClassesPage() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-outline uppercase">Subject</label>
-                  <select value={editForm.subject} onChange={e => setEditForm(prev => ({...prev, subject: e.target.value}))} className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white">
-                    {['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'General'].map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  <input
+                    required
+                    list="live-class-subject-options"
+                    value={editForm.subject}
+                    onChange={e => setEditForm(prev => ({...prev, subject: e.target.value}))}
+                    className="w-full mt-1 px-4 py-2 border border-surface-container-high rounded-xl text-sm focus:ring-2 focus:ring-on-primary-container/20 focus:outline-none bg-white"
+                    placeholder="e.g. Physics"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -347,6 +400,9 @@ export default function AdminLiveClassesPage() {
           </div>
         </div>
       )}
+      <datalist id="live-class-subject-options">
+        {subjectOptions.map((subject) => <option key={subject} value={subject} />)}
+      </datalist>
     </div>
   )
 }

@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { useExamTimer } from '@/hooks/useExamTimer'
 import { useTabVisibility } from '@/hooks/useTabVisibility'
 import { useExamStore } from '@/lib/store/examStore'
-import { useUiStore } from '@/lib/store/uiStore'
 import { modelSetService } from '@/services/modelSetService'
 import { formatCountdown } from '@/lib/utils/formatDate'
 import { getAnswerOptionClass, getQuestionBubbleClass } from '@/lib/utils/examUtils'
@@ -13,6 +12,7 @@ import { cn } from '@/lib/utils/cn'
 import { ChevronLeft, ChevronRight, Flag, CheckSquare, Clock, Loader2, ExternalLink } from 'lucide-react'
 import type { Exam } from '@/lib/types/exam'
 import ReactMarkdown from 'react-markdown'
+import { toStudentGoogleFormUrl } from '@/lib/utils/googleForms'
 
 function buildExamFromModelSet(raw: ReturnType<typeof modelSetService.getModelSet> extends Promise<{ data: infer T }> ? T : never): Exam {
   // Transform API questions into the Exam type expected by examStore
@@ -43,19 +43,25 @@ export default function ExamPage() {
   const params  = useParams<{ id: string }>()
   const router  = useRouter()
   const store   = useExamStore()
-  const { openSubmitModal } = useUiStore()
   const [exam,          setExam]         = useState<Exam | null>(null)
   const [loading,       setLoading]      = useState(true)
   const [activeSubject, setActiveSubject] = useState<string>('General')   // MUST be above all early returns
   const [formsUrl,      setFormsUrl]     = useState('')
+  const [hasResult,     setHasResult]    = useState(false)
+  const [submitting,    setSubmitting]   = useState(false)
 
   useEffect(() => {
     if (!params.id) return
     if (store.exam?.id === params.id) { setExam(store.exam); setLoading(false); return }
     modelSetService.getModelSet(Number(params.id)).then((res) => {
       const raw = res.data as Parameters<typeof buildExamFromModelSet>[0] & { forms_url?: string }
-      const externalForm = (raw.forms_url ?? '').trim()
+      const externalForm = toStudentGoogleFormUrl(raw.forms_url)
       setFormsUrl(externalForm)
+      if (externalForm) {
+        modelSetService.getMyResult(Number(params.id))
+          .then((resultRes) => setHasResult(Boolean(resultRes.data.has_result)))
+          .catch(() => setHasResult(false))
+      }
 
       const built = buildExamFromModelSet(raw)
       if (!externalForm && built.questions.length > 0) {
@@ -68,10 +74,30 @@ export default function ExamPage() {
     }).finally(() => setLoading(false))
   }, [params.id])
 
-  const handleExpired     = useCallback(() => store.submitExam(), [store])
-  const handleAutoSubmit  = useCallback(() => openSubmitModal(), [openSubmitModal])
-  const { timeRemaining, isWarning } = useExamTimer(handleExpired)
-  useTabVisibility(handleAutoSubmit)
+  const handleSubmit = useCallback(async () => {
+    if (!exam || submitting) return
+    setSubmitting(true)
+    const answerIndexes = exam.questions.map((question) => {
+      const selectedId = store.sessions[question.id]?.selectedId
+      if (!selectedId) return -1
+      return question.options.findIndex((option) => option.id === selectedId)
+    })
+    const score = exam.questions.reduce((sum, question, index) => {
+      return sum + (answerIndexes[index] >= 0 && question.options[answerIndexes[index]]?.id === question.correctId ? 1 : 0)
+    }, 0)
+
+    try {
+      await modelSetService.submitAttempt(Number(params.id), score, exam.questions.length, answerIndexes)
+      store.submitExam()
+      store.clearExam()
+      router.push(`/model-sets/${params.id}/results`)
+    } finally {
+      setSubmitting(false)
+    }
+  }, [exam, params.id, router, store, submitting])
+
+  const { timeRemaining, isWarning } = useExamTimer(handleSubmit)
+  useTabVisibility(handleSubmit)
 
   if (loading || !exam) return (
     <div className="h-screen flex items-center justify-center bg-[#f8f9fb]">
@@ -93,6 +119,11 @@ export default function ExamPage() {
           >
             <ExternalLink className="w-4 h-4" /> Open Google Form
           </a>
+          {hasResult && (
+            <button onClick={() => router.push(`/model-sets/${params.id}/results`)} className="px-6 py-2.5 bg-[#1a1a4e] text-white rounded-xl font-bold hover:bg-[#141432] transition-colors">
+              View Latest Result
+            </button>
+          )}
           <button onClick={() => router.push('/model-sets')} className="px-6 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors">
             Back to Model Sets
           </button>
@@ -148,8 +179,8 @@ export default function ExamPage() {
             <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Answered</p>
             <p className="font-headline font-black text-base">{totalAnswered}/{exam.questions.length}</p>
           </div>
-          <button onClick={() => openSubmitModal()} className="bg-on-primary-container hover:bg-[#a14f24] text-white font-bold text-sm px-5 py-2 rounded-xl active:scale-95 transition-all shadow-md">
-            Submit Exam
+          <button onClick={handleSubmit} disabled={submitting} className="bg-on-primary-container hover:bg-[#a14f24] text-white font-bold text-sm px-5 py-2 rounded-xl active:scale-95 transition-all shadow-md disabled:opacity-60">
+            {submitting ? 'Submitting…' : 'Submit Exam'}
           </button>
         </div>
       </header>

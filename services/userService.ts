@@ -1,4 +1,6 @@
-import { api } from './api'
+import { api, ApiError, forceLogout } from './api'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
 export interface User {
   id: number
@@ -69,4 +71,49 @@ export const userService = {
     api.patch<{ data: ContactMethod }>(`/api/users/contact-methods/${id}`, payload),
   deleteContactMethod: (id: number) =>
     api.delete(`/api/users/contact-methods/${id}`),
+  exportUsers: async (params: { tab?: string; search?: string } = {}) => {
+    if (typeof window === 'undefined') {
+      throw new Error('Export can only run in browser')
+    }
+
+    const filtered = Object.fromEntries(
+      Object.entries(params)
+        .filter(([, v]) => v !== '' && v != null)
+        .map(([key, value]) => [key, String(value)])
+    )
+    const query = new URLSearchParams(filtered as Record<string, string>).toString()
+    const token = localStorage.getItem('bn_token')
+    const url = `${API_URL}/api/users/export${query ? `?${query}` : ''}`
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+
+    if (res.status === 401) {
+      forceLogout('session_expired')
+      throw new ApiError('Session expired. Please log in again.', 401)
+    }
+    if (!res.ok) {
+      let message = 'Failed to export users'
+      try {
+        const body = await res.json()
+        message = body?.message || message
+      } catch {}
+      throw new ApiError(message, res.status)
+    }
+
+    const blob = await res.blob()
+    const disposition = res.headers.get('content-disposition') || ''
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
+    const filename = filenameMatch?.[1] || `users_export_${new Date().toISOString().slice(0, 10)}.csv`
+
+    const objectUrl = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = objectUrl
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(objectUrl)
+  },
 }

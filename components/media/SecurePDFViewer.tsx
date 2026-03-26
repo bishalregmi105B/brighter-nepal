@@ -5,8 +5,8 @@
  *  - Right-click context-menu blocked on the container to prevent easy saving.
  *  - True security must be enforced by signed/expiring URLs from the backend.
  */
-import { useState, useEffect } from 'react'
-import { FileText, Loader2, ShieldCheck, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { FileText, Loader2, ShieldCheck, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, AlertCircle, Maximize2, Minimize2 } from 'lucide-react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -28,12 +28,22 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
   const [pageNumber, setPageNumber] = useState<number>(1)
   const [scale, setScale] = useState<number>(1.0)
   const [error, setError] = useState<boolean>(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const viewerRef = useRef<HTMLDivElement | null>(null)
 
   // Reset state when url changes
   useEffect(() => {
     setPageNumber(1)
     setError(false)
   }, [pdfUrl])
+
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement && viewerRef.current && document.fullscreenElement === viewerRef.current))
+    }
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages)
@@ -46,8 +56,20 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
 
   const blockContextMenu = (e: React.MouseEvent) => e.preventDefault()
 
+  async function toggleFullscreen() {
+    if (!viewerRef.current) return
+    try {
+      if (!document.fullscreenElement) {
+        await viewerRef.current.requestFullscreen()
+      } else if (document.fullscreenElement === viewerRef.current) {
+        await document.exitFullscreen()
+      }
+    } catch {}
+  }
+
   return (
     <div
+      ref={viewerRef}
       className={cn('relative flex flex-col bg-[#1a1a1a] rounded-2xl overflow-hidden select-none', className)}
       onContextMenu={blockContextMenu}
     >
@@ -100,6 +122,14 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
               <ZoomIn className="w-4 h-4" />
             </button>
           </div>
+
+          <button
+            onClick={toggleFullscreen}
+            className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
 
           {/* Security badge */}
           <div className="hidden sm:flex items-center gap-1 bg-white/5 text-white/40 text-[10px] font-bold px-2.5 py-1.5 rounded-full ml-2">

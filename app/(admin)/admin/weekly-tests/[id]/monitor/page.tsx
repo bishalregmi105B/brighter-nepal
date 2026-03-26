@@ -2,7 +2,7 @@
 // Admin Weekly Test Monitor — loads real participants from weeklyTestService
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Users, Clock, CheckCircle2, AlertCircle, BarChart2, StopCircle, Eye, Loader2 } from 'lucide-react'
+import { ArrowLeft, Users, Clock, CheckCircle2, AlertCircle, BarChart2, StopCircle, Eye, Loader2, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { weeklyTestService, type WeeklyTest, type WeeklyTestAttempt } from '@/services/weeklyTestService'
 import { cn } from '@/lib/utils/cn'
@@ -21,8 +21,10 @@ export default function WeeklyTestMonitorPage() {
   const [participants, setParticipants] = useState<WeeklyTestAttempt[]>([])
   const [loading, setLoading] = useState(true)
   const [filter,  setFilter]  = useState<'all' | ParticipantStatus>('all')
+  const [syncing, setSyncing] = useState(false)
+  const [message, setMessage] = useState('')
 
-  useEffect(() => {
+  const loadData = () => {
     if (!params.id) return
     Promise.all([
       weeklyTestService.getTest(params.id),
@@ -31,6 +33,10 @@ export default function WeeklyTestMonitorPage() {
       setTest(testRes.data)
       setParticipants(partRes.data ?? [])
     }).finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadData()
   }, [params.id])
 
   const submitted  = participants.length
@@ -60,12 +66,37 @@ export default function WeeklyTestMonitorPage() {
           <Link href={`/admin/weekly-tests`} className="flex items-center gap-2 px-5 py-2.5 bg-surface-container text-[#1a1a4e] font-bold text-sm rounded-xl hover:bg-surface-container-high transition-colors">
             <BarChart2 className="w-4 h-4" /> Analytics
           </Link>
+          <button
+            onClick={async () => {
+              setSyncing(true)
+              setMessage('')
+              try {
+                const res = await weeklyTestService.syncGoogleResults(Number(params.id))
+                setMessage(`Processed ${res.data.summary.processed ?? 0} response(s). Matched ${res.data.summary.matched ?? 0}, unmatched ${res.data.summary.unmatched ?? 0}.`)
+                setTest(res.data.item)
+                loadData()
+              } finally {
+                setSyncing(false)
+              }
+            }}
+            disabled={syncing}
+            className="flex items-center gap-2 px-5 py-2.5 bg-on-primary-container text-white font-bold text-sm rounded-xl hover:opacity-90 transition-colors disabled:opacity-60"
+          >
+            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Sync Results
+          </button>
           <button onClick={() => weeklyTestService.updateTest(Number(params.id), { status: 'completed' })}
             className="flex items-center gap-2 px-5 py-2.5 bg-error/10 text-error font-bold text-sm rounded-xl hover:bg-error/20 transition-colors active:scale-95">
             <StopCircle className="w-4 h-4" /> End Test
           </button>
         </div>
       </div>
+
+      {message && (
+        <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm font-medium text-blue-700">
+          {message}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
         {[
@@ -114,7 +145,10 @@ export default function WeeklyTestMonitorPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-on-primary-container flex items-center justify-center text-white text-xs font-bold">U</div>
-                      <p className="font-bold text-on-surface">User #{p.user_id}</p>
+                      <div>
+                        <p className="font-bold text-on-surface">{p.user_name || `User #${p.user_id}`}</p>
+                        <p className="text-[11px] text-slate-400">{p.student_id || p.email || (p.source === 'google_forms' ? 'Google Forms Sync' : 'Internal Attempt')}</p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm font-bold text-on-surface">{p.score}/{p.total}</td>

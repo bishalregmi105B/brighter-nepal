@@ -1,13 +1,13 @@
 'use client'
 // Admin Model Set Edit — loads real data from API and allows full editing
-import { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Trash2, BookOpen, Clock, BarChart2, Save, Loader2, AlertCircle, Link2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { ArrowLeft, Plus, Trash2, BookOpen, Clock, BarChart2, Save, Loader2, AlertCircle, Link2, RefreshCw, DownloadCloud } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import { api } from '@/services/api'
-import { modelSetService } from '@/services/modelSetService'
-
-const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'General']
+import { modelSetService, type GoogleQuestionInventory, type GoogleSyncSummary, type ModelSet } from '@/services/modelSetService'
+import { subjectService } from '@/services/subjectService'
+import { DEFAULT_SUBJECTS, getDefaultSubject, mergeSubjectOptions } from '@/lib/utils/subjects'
 const LEVELS   = ['Easy', 'Medium', 'Hard']
 
 interface Section { id: string; subject: string; questions: number }
@@ -21,6 +21,7 @@ interface Question {
 }
 
 export default function EditModelSetPage({ params }: { params: { id: string } }) {
+  const [dbSubjects, setDbSubjects] = useState<string[]>([])
   const [loading,      setLoading]      = useState(true)
   const [saving,       setSaving]       = useState(false)
   const [saved,        setSaved]        = useState(false)
@@ -30,12 +31,58 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
   const [duration,     setDuration]     = useState('120')
   const [level,        setLevel]        = useState('Medium')
   const [formsUrl,     setFormsUrl]     = useState('')
+  const [persistedFormsUrl, setPersistedFormsUrl] = useState('')
   const [exams,        setExams]        = useState<string[]>([])
   const [availableExams, setAvailableExams] = useState<string[]>([])
   const [customExam,   setCustomExam]   = useState('')
   const [sections,     setSections]     = useState<Section[]>([])
   const [questions,    setQuestions]    = useState<Question[]>([])
   const [published,    setPublished]    = useState(false)
+  const [googleStudentIdQuestionId, setGoogleStudentIdQuestionId] = useState('')
+  const [googleQuestions, setGoogleQuestions] = useState<GoogleQuestionInventory[]>([])
+  const [googleSummary, setGoogleSummary] = useState<GoogleSyncSummary>({})
+  const [googleImportedAt, setGoogleImportedAt] = useState<string | null>(null)
+  const [googleSyncedAt, setGoogleSyncedAt] = useState<string | null>(null)
+  const [googleBusy, setGoogleBusy] = useState<'import' | 'sync' | ''>('')
+  const [googleMessage, setGoogleMessage] = useState('')
+
+  const applyModelSet = (ms: ModelSet) => {
+    setTitle(ms.title ?? '')
+    setDuration(String(ms.duration_min ?? 120))
+    setLevel(ms.difficulty ?? 'Medium')
+    setFormsUrl(ms.forms_url ?? '')
+    setPersistedFormsUrl(ms.forms_url ?? '')
+    setPublished(ms.status === 'published')
+    const targets = Array.isArray(ms.targets) ? ms.targets : []
+    setExams(targets)
+    setGoogleStudentIdQuestionId(ms.google_student_id_question_id ?? '')
+    setGoogleQuestions(ms.google_questions ?? [])
+    setGoogleSummary(ms.google_last_sync_summary ?? {})
+    setGoogleImportedAt(ms.google_questions_last_imported_at ?? null)
+    setGoogleSyncedAt(ms.google_results_last_synced_at ?? null)
+
+    const rawQs = ms.questions ?? []
+    const secMap: Record<string, number> = {}
+    const loadedQs: Question[] = rawQs.map((q, i) => {
+      const subj = q.subject ?? 'General'
+      secMap[subj] = (secMap[subj] ?? 0) + 1
+      return {
+        id: `q_${i}`,
+        question_id: q.id,
+        subject: subj,
+        text: q.text ?? '',
+        options: Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? JSON.parse(q.options) : ['', '', '', '']),
+        answer_index: q.answer_index ?? 0,
+      }
+    })
+    setQuestions(loadedQs)
+    const builtSections: Section[] = Object.entries(secMap).map(([subject, count], i) => ({
+      id: `s${i}`,
+      subject,
+      questions: count,
+    }))
+    setSections(builtSections.length > 0 ? builtSections : [{ id: 's1', subject: '', questions: 0 }])
+  }
 
   // Load the real model set data by ID
   useEffect(() => {
@@ -44,52 +91,47 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
       modelSetService.getModelSet(id),
       api.get<{ data: string[] }>('/api/model-sets/targets'),
     ]).then(([msRes, targetsRes]) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ms = (msRes as any)?.data?.data ?? (msRes as any)?.data ?? msRes
-      setTitle(ms.title ?? '')
-      setDuration(String(ms.duration_min ?? 120))
-      setLevel(ms.difficulty ?? 'Medium')
-      setFormsUrl(ms.forms_url ?? '')
-      setPublished(ms.status === 'published')
-      const targets = Array.isArray(ms.targets) ? ms.targets : []
-      setExams(targets)
-
-      // Build sections from real question data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawQs: any[] = ms.questions ?? []
-      const secMap: Record<string, number> = {}
-      const loadedQs: Question[] = rawQs.map((q, i) => {
-        const subj = q.subject ?? 'General'
-        secMap[subj] = (secMap[subj] ?? 0) + 1
-        return {
-          id: `q_${i}`,
-          question_id: q.id,
-          subject: subj,
-          text: q.text ?? '',
-          options: Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? JSON.parse(q.options) : ['', '', '', '']),
-          answer_index: q.answer_index ?? 0,
-        }
-      })
-      setQuestions(loadedQs)
-      const builtSections: Section[] = Object.entries(secMap).map(([subject, count], i) => ({
-        id: `s${i}`,
-        subject,
-        questions: count,
-      }))
-      setSections(builtSections.length > 0 ? builtSections : [{ id: 's1', subject: 'Mathematics', questions: 0 }])
+      const ms = msRes.data
+      applyModelSet(ms)
 
       // Targets list
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const td = (targetsRes as any)?.data?.data ?? (targetsRes as any)?.data ?? []
       const tArr = Array.isArray(td) ? td : []
       // Merge so all current targets are visible even if not in the global list
-      const merged = Array.from(new Set([...tArr, ...targets]))
+      const merged = Array.from(new Set([...tArr, ...(ms.targets ?? [])]))
       setAvailableExams(merged)
     }).catch(() => {
       setError('Failed to load model set. Please try again.')
     }).finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id])
+
+  useEffect(() => {
+    subjectService.getSubjects()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
+        setDbSubjects(list)
+      })
+      .catch(() => setDbSubjects([]))
+  }, [])
+
+  const subjectOptions = useMemo(
+    () => mergeSubjectOptions(
+      dbSubjects,
+      sections.map((section) => section.subject),
+      questions.map((question) => question.subject),
+      DEFAULT_SUBJECTS,
+    ),
+    [dbSubjects, questions, sections]
+  )
+  const defaultSubject = getDefaultSubject(subjectOptions, DEFAULT_SUBJECTS)
+
+  useEffect(() => {
+    if (!defaultSubject) return
+    setSections((prev) => prev.map((section) => section.subject ? section : { ...section, subject: defaultSubject }))
+    setQuestions((prev) => prev.map((question) => question.subject ? question : { ...question, subject: defaultSubject }))
+  }, [defaultSubject])
 
   const addCustomExam = () => {
     const e = customExam.trim().toUpperCase()
@@ -102,7 +144,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
     setExams(prev => prev.includes(exam) ? prev.filter(e => e !== exam) : [...prev, exam])
 
   const addSection = () =>
-    setSections(prev => [...prev, { id: `s${Date.now()}`, subject: SUBJECTS[0], questions: 0 }])
+    setSections(prev => [...prev, { id: `s${Date.now()}`, subject: defaultSubject, questions: 0 }])
   const removeSection = (id: string) =>
     setSections(prev => prev.filter(s => s.id !== id))
   const updateSection = (id: string, field: keyof Section, value: string | number) =>
@@ -111,7 +153,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
   // Question helpers
   const addQuestion = () => {
     setQuestions(prev => [...prev, {
-      id: `q_new_${Date.now()}`, subject: SUBJECTS[0],
+      id: `q_new_${Date.now()}`, subject: defaultSubject,
       text: '', options: ['', '', '', ''], answer_index: 0
     }])
   }
@@ -125,27 +167,64 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
     ))
 
   const totalQuestions = questions.length
+  const importedCount = googleQuestions.filter((q) => q.is_imported).length
+  const hasUnsavedFormsUrl = formsUrl.trim() !== persistedFormsUrl.trim()
 
   const handleSave = async () => {
     setSaving(true)
     setError('')
     try {
-      await modelSetService.updateModelSet(parseInt(params.id, 10), {
+      const res = await modelSetService.updateModelSet(parseInt(params.id, 10), {
         title,
         duration_min: parseInt(duration),
         difficulty: level,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         targets: exams as any,
         forms_url: formsUrl.trim(),
+        google_match_mode: 'email_then_student_id',
+        google_student_id_question_id: googleStudentIdQuestionId || null,
         status: published ? 'published' : 'draft',
         total_questions: totalQuestions,
       })
+      applyModelSet(res.data)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
       setError('Failed to save. Please try again.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleImportQuestions = async () => {
+    setGoogleBusy('import')
+    setGoogleMessage('')
+    setError('')
+    try {
+      const res = await modelSetService.importGoogleQuestions(parseInt(params.id, 10))
+      applyModelSet(res.data.item)
+      setGoogleSummary(res.data.summary)
+      setGoogleMessage(`Imported ${res.data.summary.imported ?? 0} question(s); skipped ${res.data.summary.skipped_unsupported ?? 0}.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to import Google Form questions.')
+    } finally {
+      setGoogleBusy('')
+    }
+  }
+
+  const handleSyncResults = async () => {
+    setGoogleBusy('sync')
+    setGoogleMessage('')
+    setError('')
+    try {
+      const res = await modelSetService.syncGoogleResults(parseInt(params.id, 10))
+      applyModelSet(res.data.item)
+      setGoogleSummary(res.data.summary)
+      setGoogleMessage(`Processed ${res.data.summary.processed ?? 0} response(s). Matched ${res.data.summary.matched ?? 0}, unmatched ${res.data.summary.unmatched ?? 0}.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sync Google Form results.')
+    } finally {
+      setGoogleBusy('')
     }
   }
 
@@ -243,9 +322,92 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
               placeholder="https://docs.google.com/forms/d/..."
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
             />
-            <p className="text-[11px] text-slate-400 mt-1.5">If provided, students can open this Google Form directly from the model set.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">If provided, students can open this Google Form directly from the model set. For import/sync, use editor URL: /forms/d/&lt;id&gt;/edit (not /forms/d/e/.../viewform).</p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_20px_rgba(25,28,30,0.04)] space-y-5">
+        <div className="flex items-start justify-between gap-4 border-b border-surface-container pb-3">
+          <div>
+            <h3 className="font-bold text-on-surface">Google Forms Import</h3>
+            <p className="text-xs text-outline font-medium mt-1">Students still use the Google Form while the imported snapshot stays in DB for fallback and result rendering.</p>
+          </div>
+          <div className="text-right text-xs text-slate-500 font-medium">
+            <p>Imported: {importedCount}</p>
+            <p>Imported at: {googleImportedAt ? new Date(googleImportedAt).toLocaleString() : '—'}</p>
+            <p>Last sync: {googleSyncedAt ? new Date(googleSyncedAt).toLocaleString() : '—'}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="md:col-span-2">
+            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Student ID Fallback Field</label>
+            <select
+              value={googleStudentIdQuestionId}
+              onChange={(e) => setGoogleStudentIdQuestionId(e.target.value)}
+              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+              disabled={googleQuestions.length === 0}
+            >
+              <option value="">Use email only</option>
+              {googleQuestions.map((question) => (
+                <option key={question.google_question_id} value={question.google_question_id}>
+                  {question.title} • {question.question_type}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-slate-400 mt-1.5">Pick the Google question that contains the student ID when responder email is unavailable.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-surface-container-low rounded-xl p-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Imported Questions</p>
+            <p className="text-xl font-black text-[#1a1a4e] mt-2">{importedCount}</p>
+          </div>
+          <div className="bg-surface-container-low rounded-xl p-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Sync</p>
+            <p className="text-sm font-bold text-[#1a1a4e] mt-2">{(googleSummary.processed ?? 0) > 0 ? `${googleSummary.processed} processed` : '—'}</p>
+          </div>
+          <div className="bg-surface-container-low rounded-xl p-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Matched</p>
+            <p className="text-xl font-black text-[#1a1a4e] mt-2">{googleSummary.matched ?? 0}</p>
+          </div>
+          <div className="bg-surface-container-low rounded-xl p-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unmatched</p>
+            <p className="text-xl font-black text-[#1a1a4e] mt-2">{googleSummary.unmatched ?? 0}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleImportQuestions}
+            disabled={googleBusy !== '' || !persistedFormsUrl.trim() || hasUnsavedFormsUrl}
+            className="px-5 py-3 bg-[#1a1a4e] text-white rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {googleBusy === 'import' ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
+            Import Questions
+          </button>
+          <button
+            onClick={handleSyncResults}
+            disabled={googleBusy !== '' || !persistedFormsUrl.trim() || hasUnsavedFormsUrl || importedCount === 0}
+            className="px-5 py-3 bg-on-primary-container text-white rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {googleBusy === 'sync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Sync Results
+          </button>
+          {hasUnsavedFormsUrl && (
+            <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl">
+              Save the updated Google Forms URL before importing or syncing.
+            </span>
+          )}
+        </div>
+
+        {googleMessage && (
+          <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm font-medium text-blue-700">
+            {googleMessage}
+          </div>
+        )}
       </div>
 
       {/* Sections (visual summary only) */}
@@ -263,10 +425,13 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
           <div key={s.id} className="bg-white rounded-xl p-5 shadow-[0_8px_20px_rgba(25,28,30,0.04)] flex items-center gap-4">
             <div className="w-8 h-8 rounded-full bg-[#1a1a4e] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{i + 1}</div>
             <BookOpen className="w-4 h-4 text-outline flex-shrink-0" />
-            <select value={s.subject} onChange={e => updateSection(s.id, 'subject', e.target.value)}
-              className="flex-1 px-3 py-2 bg-surface-container rounded-lg border-none text-sm font-medium focus:ring-2 focus:ring-on-primary-container/20">
-              {SUBJECTS.map(sub => <option key={sub}>{sub}</option>)}
-            </select>
+            <input
+              list="model-set-edit-subject-options"
+              value={s.subject}
+              onChange={e => updateSection(s.id, 'subject', e.target.value)}
+              className="flex-1 px-3 py-2 bg-surface-container rounded-lg border-none text-sm font-medium focus:ring-2 focus:ring-on-primary-container/20"
+              placeholder="e.g. Mathematics"
+            />
             <div className="flex items-center gap-2 flex-shrink-0">
               <label className="text-xs font-bold text-outline">Questions:</label>
               <input type="number" value={s.questions} min={0}
@@ -306,10 +471,13 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-2 flex-shrink-0">
                 <div className="w-7 h-7 rounded-full bg-[#1a1a4e] text-white text-xs font-black flex items-center justify-center">{qi + 1}</div>
-                <select value={q.subject} onChange={e => updateQuestion(q.id, 'subject', e.target.value)}
-                  className="px-2 py-1 bg-surface-container rounded-lg border-none text-xs font-bold text-slate-600 focus:ring-2 focus:ring-on-primary-container/20">
-                  {SUBJECTS.map(sub => <option key={sub}>{sub}</option>)}
-                </select>
+                <input
+                  list="model-set-edit-subject-options"
+                  value={q.subject}
+                  onChange={e => updateQuestion(q.id, 'subject', e.target.value)}
+                  className="px-2 py-1 bg-surface-container rounded-lg border-none text-xs font-bold text-slate-600 focus:ring-2 focus:ring-on-primary-container/20"
+                  placeholder="Subject"
+                />
               </div>
               <button onClick={() => removeQuestion(q.id)} className="p-1.5 text-error hover:bg-error-container rounded-lg transition-colors">
                 <Trash2 className="w-4 h-4" />
@@ -348,6 +516,9 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
           {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><Save className="w-4 h-4" />{saved ? 'Saved!' : 'Save Changes'}</>}
         </button>
       </div>
+      <datalist id="model-set-edit-subject-options">
+        {subjectOptions.map((item) => <option key={item} value={item} />)}
+      </datalist>
     </div>
   )
 }

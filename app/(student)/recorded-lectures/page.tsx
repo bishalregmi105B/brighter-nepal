@@ -4,10 +4,10 @@ import { useEffect, useState, useMemo } from 'react'
 import { Play, Clock, BookOpen, Download, Search, X, Loader2 } from 'lucide-react'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
 import { resourceService, type Resource } from '@/services/resourceService'
+import { subjectService } from '@/services/subjectService'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
-
-const SUBJECTS = ['All', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English']
+import { DEFAULT_SUBJECTS, mergeSubjectOptions } from '@/lib/utils/subjects'
 
 const subjectColors: Record<string, string> = {
   Mathematics: 'bg-blue-100 text-blue-700',
@@ -20,6 +20,7 @@ const subjectColors: Record<string, string> = {
 export default function RecordedLecturesPage() {
   const [lectures, setLectures] = useState<LiveClass[]>([])
   const [linkedResources, setLinkedResources] = useState<Record<number, { count: number; singleId: number | null }>>({})
+  const [subjects, setSubjects] = useState<string[]>([])
   const [loading,  setLoading]  = useState(true)
   const [active,   setActive]   = useState('All')
   const [search,   setSearch]   = useState('')
@@ -29,6 +30,17 @@ export default function RecordedLecturesPage() {
       setLectures(res.data?.items ?? [])
     }).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    subjectService.getSubjects()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
+        setSubjects(mergeSubjectOptions(list, DEFAULT_SUBJECTS))
+      })
+      .catch(() => {})
+  }, [])
+
+  const formatDuration = (minutes?: number | null) => minutes && minutes > 0 ? `${minutes}min` : '—'
 
   useEffect(() => {
     let cancelled = false
@@ -96,7 +108,7 @@ export default function RecordedLecturesPage() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {SUBJECTS.map((s) => (
+        {['All', ...subjects].map((s) => (
           <button key={s} onClick={() => setActive(s)} className={cn(
             'px-4 py-2 rounded-xl text-sm font-bold transition-all border',
             active === s ? 'bg-[#c0622f] text-white border-transparent shadow-md' : 'bg-white text-slate-600 border-outline-variant/20 hover:border-[#c0622f]/30'
@@ -126,7 +138,7 @@ export default function RecordedLecturesPage() {
                   <Play className="w-7 h-7 text-white fill-white" />
                 </div>
                 <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/60 px-2.5 py-1 rounded-full text-white text-[10px] font-bold">
-                  <Clock className="w-3 h-3" /> {lec.duration_min ?? '—'}min
+                  <Clock className="w-3 h-3" /> {formatDuration(lec.duration_min)}
                 </div>
               </Link>
               <div className="p-5">

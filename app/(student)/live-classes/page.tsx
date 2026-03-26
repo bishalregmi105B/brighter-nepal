@@ -33,6 +33,8 @@ export default function LiveClassesPage() {
     }).finally(() => setLoading(false))
   }, [])
 
+  const formatDuration = (minutes?: number | null) => minutes && minutes > 0 ? `${minutes} mins` : 'Duration not set'
+
   const byLatestSchedule = (a: LiveClass, b: LiveClass) => {
     const bTime = new Date(b.scheduled_at ?? b.created_at ?? '').getTime()
     const aTime = new Date(a.scheduled_at ?? a.created_at ?? '').getTime()
@@ -53,7 +55,7 @@ export default function LiveClassesPage() {
     subject:  c.subject,
     date:     c.scheduled_at?.slice(0, 10) ?? '—',
     status:   (i % 3 === 1 ? 'missed' : 'joined') as 'joined' | 'missed',
-    duration: `${c.duration_min}m`,
+    duration: c.duration_min && c.duration_min > 0 ? `${c.duration_min}m` : '—',
   }))
 
   const filteredHistory = history.filter((h) => historyFilter === 'all' || h.status === historyFilter)
@@ -92,7 +94,7 @@ export default function LiveClassesPage() {
                 {featuredLive.title}
               </h2>
               <p className="text-base opacity-85 font-medium">
-                {featuredLive.subject} · {featuredLive.teacher} · {featuredLive.duration_min} mins
+                {featuredLive.subject} · {featuredLive.teacher} · {formatDuration(featuredLive.duration_min)}
               </p>
               <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full text-xs font-semibold">
                 <Users className="w-3.5 h-3.5" /> {(featuredLive.watchers ?? 0).toLocaleString()} watching now

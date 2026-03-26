@@ -1,12 +1,15 @@
 'use client'
-// Admin Resources — full CRUD with create/edit modal for all 5 resource types
+// Admin Resources — full CRUD with modal focused on PDF + Notes, with optional compact advanced types
 import { useEffect, useState, useMemo } from 'react'
 import {
   Plus, Search, Trash2, FileText, Video, Headphones, Globe, FileArchive,
   Link2, X, Loader2, Pencil, BookOpen, Eye, Upload
 } from 'lucide-react'
 import { resourceService, type Resource } from '@/services/resourceService'
+import { liveClassService, type LiveClass } from '@/services/liveClassService'
+import { subjectService } from '@/services/subjectService'
 import { cn } from '@/lib/utils/cn'
+import { DEFAULT_SUBJECTS, getDefaultSubject, mergeSubjectOptions } from '@/lib/utils/subjects'
 
 // ── Type config ──────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<string, {
@@ -56,11 +59,13 @@ const TYPE_CONFIG: Record<string, {
 
 const SECTIONS     = ['', 'Model Questions', 'Extra Study Materials', 'Short Notes', 'Reference Materials']
 const TYPE_FILTERS = ['All', 'pdf', 'video', 'link', 'notes', 'file', 'audio']
+const PRIMARY_MODAL_TYPES = ['pdf', 'notes'] as const
+const ADVANCED_MODAL_TYPES = Object.keys(TYPE_CONFIG).filter((t) => !PRIMARY_MODAL_TYPES.includes(t as (typeof PRIMARY_MODAL_TYPES)[number]))
 
 // ── Empty form state ─────────────────────────────────────────────────────────
 const EMPTY_FORM = {
   title: '', subject: '', format: 'pdf', section: '',
-  file_url: '', size_label: '', tags: '', description: '', thumbnail_url: '',
+  file_url: '', size_label: '', tags: '', description: '', thumbnail_url: '', live_class_id: '',
 }
 
 type FormState = typeof EMPTY_FORM
@@ -79,10 +84,11 @@ function formatBytes(bytes: number): string {
 
 // ── Modal Component ──────────────────────────────────────────────────────────
 function ResourceModal({
-  initial, subjects, onClose, onSaved,
+  initial, subjects, recordedLectures, onClose, onSaved,
 }: {
   initial?: Resource | null
   subjects: string[]
+  recordedLectures: LiveClass[]
   onClose: () => void
   onSaved: (r: Resource) => void
 }) {
@@ -97,14 +103,26 @@ function ResourceModal({
     tags: Array.isArray(initial.tags) ? initial.tags.join(', ') : '',
     description: initial.description ?? '',
     thumbnail_url: initial.thumbnail_url ?? '',
-  } : { ...EMPTY_FORM, subject: subjects[0] || '' })
+    live_class_id: initial.live_class_id ? String(initial.live_class_id) : '',
+  } : { ...EMPTY_FORM, subject: getDefaultSubject(subjects, DEFAULT_SUBJECTS) })
   const [customSubject, setCustomSubject] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploadingPdf, setUploadingPdf] = useState(false)
   const [error,  setError]  = useState('')
 
   const cfg = TYPE_CONFIG[form.format] ?? TYPE_CONFIG.pdf
-  const effectiveSubject = form.subject === '__new__' ? customSubject : form.subject
+  const effectiveSubject = form.subject === '__new__' ? customSubject.trim() : form.subject.trim()
+  const selectedLectureMissing = !!form.live_class_id && !recordedLectures.some((lecture) => String(lecture.id) === form.live_class_id)
+  const selectedLecture = form.live_class_id ? recordedLectures.find((lecture) => String(lecture.id) === form.live_class_id) ?? null : null
+  const filteredRecordedLectures = useMemo(() => {
+    if (!effectiveSubject) return recordedLectures
+    const subjectKey = effectiveSubject.toLowerCase()
+    const matching = recordedLectures.filter((lecture) => (lecture.subject || '').trim().toLowerCase() === subjectKey)
+    if (selectedLecture && !matching.some((lecture) => lecture.id === selectedLecture.id)) {
+      return [selectedLecture, ...matching]
+    }
+    return matching
+  }, [effectiveSubject, recordedLectures, selectedLecture])
 
   function set(key: keyof FormState, value: string) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -142,6 +160,7 @@ function ResourceModal({
       ...form,
       subject: effectiveSubject,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      live_class_id: form.live_class_id ? Number(form.live_class_id) : null,
     }
     try {
       let res: Resource
@@ -187,8 +206,9 @@ function ResourceModal({
           {/* Resource Type Selector */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Resource Type</label>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {Object.entries(TYPE_CONFIG).map(([type, c]) => {
+            <div className="grid grid-cols-2 gap-2">
+              {PRIMARY_MODAL_TYPES.map((type) => {
+                const c = TYPE_CONFIG[type]
                 const TIcon = c.Icon
                 return (
                   <button key={type}
@@ -206,6 +226,21 @@ function ResourceModal({
                   </button>
                 )
               })}
+            </div>
+            <div className="mt-3">
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Other Types (Advanced)</label>
+              <select
+                value={ADVANCED_MODAL_TYPES.includes(form.format) ? form.format : ''}
+                onChange={(e) => {
+                  if (e.target.value) set('format', e.target.value)
+                }}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#c0622f]/20"
+              >
+                <option value="">Keep as PDF / Notes</option>
+                {ADVANCED_MODAL_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
             </div>
             {/* Type description */}
             <p className="text-xs text-slate-400 mt-2 italic">{cfg.description}</p>
@@ -298,6 +333,31 @@ function ResourceModal({
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Attach to Recorded Lecture</label>
+            <select
+              value={form.live_class_id}
+              onChange={e => set('live_class_id', e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/20"
+            >
+              <option value="">Not linked</option>
+              {selectedLectureMissing && (
+                <option value={form.live_class_id}>Linked lecture #{form.live_class_id}</option>
+              )}
+              {filteredRecordedLectures.map((lecture) => (
+                <option key={lecture.id} value={lecture.id}>
+                  {lecture.title} · {lecture.subject} · {lecture.teacher}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Linked resources will appear inside that recorded lecture&apos;s Resources tab and button flow.
+            </p>
+            {effectiveSubject && filteredRecordedLectures.length === 0 && !selectedLectureMissing && (
+              <p className="mt-1 text-[11px] text-amber-600">No recorded lectures found for the selected subject yet.</p>
+            )}
+          </div>
+
           {/* Size + Tags */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -359,6 +419,7 @@ function ResourceModal({
 export default function AdminResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [subjects,  setSubjects]  = useState<string[]>([])
+  const [recordedLectures, setRecordedLectures] = useState<LiveClass[]>([])
   const [loading,   setLoading]   = useState(true)
   const [query,     setQuery]     = useState('')
   const [subject,   setSubject]   = useState('All')
@@ -367,15 +428,46 @@ export default function AdminResourcesPage() {
 
   // Load distinct subjects from API
   useEffect(() => {
-    resourceService.getSubjects().then((res) => {
+    subjectService.getSubjects().then((res) => {
       const subs = Array.isArray(res.data) ? res.data as string[] : (res.data as { data?: string[] })?.data ?? []
-      setSubjects(subs)
+      setSubjects(mergeSubjectOptions(subs, DEFAULT_SUBJECTS))
     }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadRecordedLectures() {
+      try {
+        const allLectures: LiveClass[] = []
+        let page = 1
+        let pages = 1
+
+        do {
+          const res = await liveClassService.getLiveClasses('completed', page)
+          const payload = res.data as unknown as { items?: LiveClass[]; pages?: number }
+          allLectures.push(...(payload.items ?? []))
+          pages = Number(payload.pages ?? 1)
+          page += 1
+        } while (page <= pages)
+
+        if (!cancelled) {
+          setRecordedLectures(allLectures)
+        }
+      } catch {
+        if (!cancelled) {
+          setRecordedLectures([])
+        }
+      }
+    }
+
+    loadRecordedLectures()
+    return () => { cancelled = true }
   }, [])
 
   const fetchResources = () => {
     setLoading(true)
-    resourceService.getResources({ section: subject === 'All' ? '' : subject, search: query })
+    resourceService.getResources({ subject: subject === 'All' ? '' : subject, search: query })
       .then((res) => {
         const d = res.data
         setResources(Array.isArray(d) ? d : (d as { items?: Resource[] }).items ?? [])
@@ -389,6 +481,11 @@ export default function AdminResourcesPage() {
     if (typeF === 'All') return resources
     return resources.filter(r => r.format === typeF)
   }, [resources, typeF])
+
+  const lectureMap = useMemo(
+    () => new Map(recordedLectures.map((lecture) => [lecture.id, lecture])),
+    [recordedLectures]
+  )
 
   const openCreate = () => setModal({ open: true, editing: null })
   const openEdit   = (r: Resource) => setModal({ open: true, editing: r })
@@ -477,6 +574,7 @@ export default function AdminResourcesPage() {
               ) : filtered.map((res) => {
                 const cfg  = TYPE_CONFIG[res.format] ?? TYPE_CONFIG.pdf
                 const Icon = cfg.Icon
+                const linkedLecture = res.live_class_id ? lectureMap.get(res.live_class_id) : null
                 return (
                   <tr key={res.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4">
@@ -486,6 +584,11 @@ export default function AdminResourcesPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-on-surface text-sm truncate max-w-[200px]">{res.title}</p>
+                          {linkedLecture && (
+                            <p className="text-[11px] text-[#c0622f] font-semibold truncate max-w-[240px]">
+                              Linked to: {linkedLecture.title}
+                            </p>
+                          )}
                           {res.description && (
                             <p className="text-xs text-slate-400 truncate max-w-[200px]">{res.description}</p>
                           )}
@@ -533,6 +636,7 @@ export default function AdminResourcesPage() {
         <ResourceModal
           initial={modal.editing}
           subjects={subjects}
+          recordedLectures={recordedLectures}
           onClose={closeModal}
           onSaved={handleSaved}
         />

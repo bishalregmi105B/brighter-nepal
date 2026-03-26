@@ -246,6 +246,7 @@ export default function UserManagementPage() {
   const [users,    setUsers]    = useState<User[]>([])
   const [total,    setTotal]    = useState(0)
   const [loading,  setLoading]  = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [stats,    setStats]    = useState({ total_users: 0, paid_users: 0, trial_users: 0, total_payment: 0, today_payment: 0 })
   const [shifting, setShifting] = useState<User | null>(null)
   const [viewingOnboarding, setViewingOnboarding] = useState<User | null>(null)
@@ -291,6 +292,18 @@ export default function UserManagementPage() {
     setEditing(null)
   }
 
+  const exportUsers = async () => {
+    setExporting(true)
+    try {
+      await userService.exportUsers({ tab, search: query })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to export users'
+      window.alert(message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const statCards = [
     { label: 'Total Users',     value: stats.total_users,                             badge: 'BridgeCourse', badgeColor: 'text-teal-600 bg-teal-50' },
     { label: 'Paid Users',      value: stats.paid_users,                              badge: 'Paid Tier',    badgeColor: 'text-on-primary-container bg-orange-50' },
@@ -316,8 +329,13 @@ export default function UserManagementPage() {
           <p className="text-on-surface-variant font-medium text-sm">BridgeCourse Nepal — manage students and their academic tiers.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button className="bg-surface-container-highest text-[#1a1a4e] px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors">
-            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
+          <button
+            onClick={exportUsers}
+            disabled={exporting}
+            className="bg-surface-container-highest text-[#1a1a4e] px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span className="hidden sm:inline">{exporting ? 'Exporting...' : 'Export'}</span>
           </button>
           <Link href="/admin/users/bulk-generate" className="bg-[#c0622f] text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
             <UserPlus className="w-4 h-4" /> <span className="hidden sm:inline">Enroll Students</span>

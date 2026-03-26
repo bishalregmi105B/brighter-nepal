@@ -92,29 +92,31 @@ export default function LiveClassMonitorPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex min-h-0">
-        <div className="flex-1 bg-black flex items-center justify-center relative">
-          <SecureVideoPlayer
-            videoUrl={cls?.stream_url ?? ''}
-            title={cls?.title}
-            preferLiveEdge
-            className="w-full h-full rounded-none aspect-auto"
-          />
-          <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-4 pointer-events-none">
+      <div className="flex-1 flex min-h-0 flex-col xl:flex-row">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-[#0b0b18] p-4 md:p-6">
+          <div className="w-full max-w-6xl mx-auto space-y-4">
+            <SecureVideoPlayer
+              videoUrl={cls?.stream_url ?? ''}
+              title={cls?.title}
+              preferLiveEdge
+              className="w-full rounded-[24px] shadow-[0_20px_80px_rgba(0,0,0,0.35)]"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
             {[
               { label: 'Watching',      value: (onlineCount || cls?.watchers || 0).toLocaleString() },
               { label: 'Chat Messages', value: messages.length.toString()                               },
               { label: 'Live Room',     value: cls?.id ? `#${cls.id}` : 'None'                          },
             ].map((s) => (
-              <div key={s.label} className="bg-black/50 backdrop-blur-sm rounded-xl px-4 py-3 text-center">
+                <div key={s.label} className="bg-white/6 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-4 text-center">
                 <p className="text-white font-black text-xl">{s.value}</p>
                 <p className="text-white/50 text-xs font-medium mt-0.5">{s.label}</p>
               </div>
             ))}
           </div>
         </div>
+        </div>
 
-        <div className="w-80 bg-white flex flex-col flex-shrink-0 border-l border-white/10">
+        <div className="w-full xl:w-80 bg-white flex flex-col flex-shrink-0 border-t xl:border-t-0 xl:border-l border-white/10 min-h-[320px] xl:min-h-0">
           <div className="flex border-b border-surface-container flex-shrink-0">
             <button onClick={() => setActiveTab('chat')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'chat' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
               <MessageSquare className="w-4 h-4" /> Chat ({messages.length})

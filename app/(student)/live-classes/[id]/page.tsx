@@ -55,6 +55,8 @@ export default function LiveClassRoomPage() {
     setTyping(e.target.value.length > 0)
   }
 
+  const formatDuration = (minutes?: number | null) => minutes && minutes > 0 ? `${minutes} minutes` : 'Duration not set'
+
   if (loading) return <div className="flex items-center justify-center h-screen bg-[#f8f9fb]"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
 
   // ── Status guards ──────────────────────────────────────────────────────────
@@ -107,9 +109,9 @@ export default function LiveClassRoomPage() {
   // ──────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-[#f8f9fb] overflow-hidden">
+    <div className="h-screen flex flex-col lg:flex-row bg-[#f8f9fb] overflow-hidden">
       {/* Video Side */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
         <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-white flex-shrink-0 z-20">
           <div className="flex items-center gap-4">
             <button className="md:hidden text-slate-500 hover:text-[#1a1a4e]" onClick={() => router.back()}><ArrowLeft className="w-5 h-5"/></button>
@@ -134,13 +136,15 @@ export default function LiveClassRoomPage() {
           </div>
         </div>
 
-        <div className="flex-1 bg-black flex items-center justify-center relative min-h-0">
-          <SecureVideoPlayer
-            videoUrl={cls?.stream_url ?? ''}
-            title={cls?.title}
-            preferLiveEdge
-            className="w-full h-full rounded-none aspect-auto"
-          />
+        <div className="flex-1 min-h-0 overflow-y-auto bg-[#0b1020] p-3 md:p-6">
+          <div className="w-full max-w-6xl mx-auto">
+            <SecureVideoPlayer
+              videoUrl={cls?.stream_url ?? ''}
+              title={cls?.title}
+              preferLiveEdge
+              className="w-full rounded-[24px] shadow-[0_20px_80px_rgba(0,0,0,0.25)]"
+            />
+          </div>
         </div>
 
         {/* Class Details */}
@@ -148,7 +152,7 @@ export default function LiveClassRoomPage() {
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-1">
               <span className="bg-[#1a1a4e]/5 text-[#1a1a4e] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{cls?.subject}</span>
-              <span className="text-slate-500 text-xs font-medium">{cls?.duration_min} minutes</span>
+              <span className="text-slate-500 text-xs font-medium">{formatDuration(cls?.duration_min)}</span>
             </div>
             <h1 className="text-lg font-headline font-bold text-[#1a1a4e]">{cls?.title}</h1>
           </div>
@@ -165,7 +169,7 @@ export default function LiveClassRoomPage() {
       </div>
 
       {/* Chat Panel */}
-      <div className="w-full flex-1 md:flex-none md:w-80 flex flex-col bg-white border-l border-slate-200/10 min-h-0">
+      <div className="w-full flex-1 lg:flex-none lg:w-80 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-slate-200/10 min-h-[320px] lg:min-h-0">
         <div className="flex border-b border-surface-container bg-surface-container-low flex-shrink-0">
           {[{ id: 'chat', label: 'Live Chat' }, { id: 'qa', label: 'Q&A' }].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as 'chat' | 'qa')} className={cn(

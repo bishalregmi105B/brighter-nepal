@@ -1,13 +1,13 @@
 'use client'
 // Admin Model Sets Create — build a new model/mock exam set with inline question editor
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, Plus, Trash2, BookOpen, Clock, BarChart2, Save, Loader2, Link2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils/cn'
 import { api } from '@/services/api'
-
-const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English']
+import { subjectService } from '@/services/subjectService'
+import { DEFAULT_SUBJECTS, getDefaultSubject, mergeSubjectOptions } from '@/lib/utils/subjects'
 const LEVELS   = ['Easy', 'Medium', 'Hard']
 
 interface Section { id: string; subject: string; questions: number }
@@ -15,6 +15,7 @@ interface Question { id: string; text: string; options: string[]; answer: number
 
 export default function CreateModelSetPage() {
   const router = useRouter()
+  const [dbSubjects, setDbSubjects] = useState<string[]>([])
 
   const [title,     setTitle]     = useState('')
   const [duration,  setDuration]  = useState('120')
@@ -23,7 +24,7 @@ export default function CreateModelSetPage() {
   const [exams,     setExams]     = useState<string[]>([])
   const [availableExams, setAvailableExams] = useState<string[]>([])
   const [customExam, setCustomExam] = useState('')
-  const [sections,  setSections]  = useState<Section[]>([{ id: 's1', subject: 'Mathematics', questions: 25 }])
+  const [sections,  setSections]  = useState<Section[]>([{ id: 's1', subject: '', questions: 25 }])
   const [questions, setQuestions] = useState<Question[]>([
     { id: 'q1', text: '', options: ['', '', '', ''], answer: 0 },
   ])
@@ -33,7 +34,24 @@ export default function CreateModelSetPage() {
     api.get<{ data: string[] }>('/api/model-sets/targets')
       .then(r => { const d = r.data; setAvailableExams(Array.isArray(d) ? d : (d as { data?: string[] })?.data ?? []) })
       .catch(() => setAvailableExams(['IOE', 'IOM', 'CEE', 'CSIT', 'NEB']))
+    subjectService.getSubjects()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
+        setDbSubjects(list)
+      })
+      .catch(() => setDbSubjects([]))
   }, [])
+
+  const subjectOptions = useMemo(
+    () => mergeSubjectOptions(dbSubjects, sections.map((section) => section.subject), DEFAULT_SUBJECTS),
+    [dbSubjects, sections]
+  )
+  const defaultSubject = getDefaultSubject(subjectOptions, DEFAULT_SUBJECTS)
+
+  useEffect(() => {
+    if (!defaultSubject) return
+    setSections((prev) => prev.map((section) => section.subject ? section : { ...section, subject: defaultSubject }))
+  }, [defaultSubject])
 
   const addCustomExam = () => {
     const e = customExam.trim().toUpperCase()
@@ -47,7 +65,7 @@ export default function CreateModelSetPage() {
     setExams((prev) => prev.includes(exam) ? prev.filter((e) => e !== exam) : [...prev, exam])
 
   const addSection = () =>
-    setSections((prev) => [...prev, { id: `s${Date.now()}`, subject: SUBJECTS[0], questions: 10 }])
+    setSections((prev) => [...prev, { id: `s${Date.now()}`, subject: defaultSubject, questions: 10 }])
 
   const removeSection = (id: string) =>
     setSections((prev) => prev.filter((s) => s.id !== id))
@@ -193,7 +211,7 @@ export default function CreateModelSetPage() {
               placeholder="https://docs.google.com/forms/d/..."
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
             />
-            <p className="text-[11px] text-slate-400 mt-1.5">If provided, students can open this Google Form directly from the model set.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">If provided, students can open this Google Form directly from the model set. For import/sync, use editor URL: /forms/d/&lt;id&gt;/edit (not /forms/d/e/.../viewform).</p>
           </div>
         </div>
       </div>
@@ -216,13 +234,13 @@ export default function CreateModelSetPage() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <BookOpen className="w-4 h-4 text-outline" />
             </div>
-            <select
+            <input
+              list="model-set-create-subject-options"
               value={s.subject}
               onChange={(e) => updateSection(s.id, 'subject', e.target.value)}
               className="flex-1 px-3 py-2 bg-surface-container rounded-lg border-none text-sm font-medium focus:ring-2 focus:ring-on-primary-container/20"
-            >
-              {SUBJECTS.map((sub) => <option key={sub}>{sub}</option>)}
-            </select>
+              placeholder="e.g. Mathematics"
+            />
             <div className="flex items-center gap-2 flex-shrink-0">
               <label className="text-xs font-bold text-outline">Questions:</label>
               <input
@@ -303,6 +321,9 @@ export default function CreateModelSetPage() {
           {saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Publish Set'}
         </button>
       </div>
+      <datalist id="model-set-create-subject-options">
+        {subjectOptions.map((item) => <option key={item} value={item} />)}
+      </datalist>
     </div>
   )
 }
