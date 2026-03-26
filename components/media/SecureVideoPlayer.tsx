@@ -75,7 +75,7 @@ export function SecureVideoPlayer({
       if (window.csPlayer) { onReady(); }
       else {
         const csScript = document.createElement('script')
-        csScript.src = '/csPlayer.js'
+        csScript.src = '/csPlayer.js?v=' + Date.now()
         csScript.async = true
         csScript.onload = onReady
         csScript.onerror = () => { if (isMounted) setPlayerError('Failed to load player script'); }
@@ -86,7 +86,7 @@ export function SecureVideoPlayer({
         if (window.csPlayer) { onReady(); }
         else {
           const csScript = document.createElement('script')
-          csScript.src = '/csPlayer.js'
+          csScript.src = '/csPlayer.js?v=' + Date.now()
           csScript.async = true
           csScript.onload = onReady
           csScript.onerror = () => { if (isMounted) setPlayerError('Failed to load player script'); }
@@ -106,34 +106,6 @@ export function SecureVideoPlayer({
 
   useEffect(() => {
     let localPlayerId: string | null = null;
-    const liveEdgeSyncTimers: number[] = []
-
-    const syncToLiveEdge = (playerId: string): boolean => {
-      const player = window.csPlayer?.csPlayers?.[playerId]?.videoTag as
-        | { getDuration?: () => number; getCurrentTime?: () => number; seekTo?: (seconds: number, allowSeekAhead?: boolean) => void }
-        | undefined
-
-      if (!player?.getDuration || !player?.getCurrentTime || !player?.seekTo) return false
-
-      const duration = Number(player.getDuration())
-      if (!Number.isFinite(duration) || duration <= 0) return false
-
-      const current = Number(player.getCurrentTime())
-      const liveEdge = Math.max(duration - 1, 0)
-      if (!Number.isFinite(current) || liveEdge - current > 8) {
-        player.seekTo(liveEdge, true)
-      }
-      return true
-    }
-
-    const scheduleLiveEdgeSync = (playerId: string) => {
-      if (!preferLiveEdge) return
-      // Retry a few times because duration metadata for live streams can arrive late.
-      ;[800, 2000, 4500, 8000, 12000].forEach((delay) => {
-        const timer = window.setTimeout(() => { syncToLiveEdge(playerId) }, delay)
-        liveEdgeSyncTimers.push(timer)
-      })
-    }
 
     if (areScriptsReady && ytId && playerDivRef.current) {
       const div = playerDivRef.current;
@@ -156,6 +128,7 @@ export function SecureVideoPlayer({
           thumbnail: true,
           theme: "default",
           loop: false,
+          preferLiveEdge,
           playerVars: {
             playsinline: 1,
             fs: 1,
@@ -169,7 +142,6 @@ export function SecureVideoPlayer({
         }).then(() => {
           const indicator = div.querySelector('.video-loading-indicator');
           if (indicator) div.removeChild(indicator);
-          scheduleLiveEdgeSync(newId)
         }).catch(() => {
           setPlayerError('Failed to load video via csPlayer.')
           const indicator = div.querySelector('.video-loading-indicator');
@@ -182,7 +154,6 @@ export function SecureVideoPlayer({
     }
 
     return () => {
-       liveEdgeSyncTimers.forEach((t) => window.clearTimeout(t))
        const idToClean = localPlayerId || currentPlayerIdRef.current;
        if (idToClean && window.csPlayer && document.getElementById(idToClean)) {
          try { window.csPlayer.destroy(idToClean); } catch {}

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Play, Clock, BookOpen, Download, Search, X, Loader2 } from 'lucide-react'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
+import { resourceService, type Resource } from '@/services/resourceService'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
 
@@ -18,6 +19,7 @@ const subjectColors: Record<string, string> = {
 
 export default function RecordedLecturesPage() {
   const [lectures, setLectures] = useState<LiveClass[]>([])
+  const [linkedResources, setLinkedResources] = useState<Record<number, { count: number; singleId: number | null }>>({})
   const [loading,  setLoading]  = useState(true)
   const [active,   setActive]   = useState('All')
   const [search,   setSearch]   = useState('')
@@ -26,6 +28,45 @@ export default function RecordedLecturesPage() {
     liveClassService.getLiveClasses('completed').then((res) => {
       setLectures(res.data?.items ?? [])
     }).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadLinkedResources() {
+      try {
+        const grouped: Record<number, { count: number; singleId: number | null }> = {}
+        let page = 1
+        let pages = 1
+
+        do {
+          const res = await resourceService.getResources({ page, per_page: 200 })
+          const payload = Array.isArray(res.data) ? { items: res.data, pages: 1 } : res.data
+          const items = (payload as { items?: Resource[] }).items ?? []
+          pages = Array.isArray(res.data) ? 1 : Number((payload as { pages?: number }).pages ?? 1)
+
+          items.forEach((resource) => {
+            if (!resource.live_class_id) return
+            if (!grouped[resource.live_class_id]) {
+              grouped[resource.live_class_id] = { count: 0, singleId: null }
+            }
+            grouped[resource.live_class_id].count += 1
+            if (grouped[resource.live_class_id].count === 1) {
+              grouped[resource.live_class_id].singleId = resource.id
+            }
+          })
+
+          page += 1
+        } while (page <= pages)
+
+        if (!cancelled) setLinkedResources(grouped)
+      } catch {
+        if (!cancelled) setLinkedResources({})
+      }
+    }
+
+    loadLinkedResources()
+    return () => { cancelled = true }
   }, [])
 
   const filtered = useMemo(() => {
@@ -72,7 +113,13 @@ export default function RecordedLecturesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filtered.map((lec) => (
+          {filtered.map((lec) => {
+            const linked = linkedResources[lec.id]
+            const resourcesHref = linked?.count === 1 && linked.singleId
+              ? `/resources/${linked.singleId}`
+              : `/recorded-lectures/${lec.id}?tab=resources`
+
+            return (
             <div key={lec.id} className="bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] overflow-hidden group hover:shadow-xl transition-all">
               <Link href={`/recorded-lectures/${lec.id}`} className="relative h-40 bg-gradient-to-br from-[#1a1a4e]/90 to-[#2d6a6a]/60 flex items-center justify-center cursor-pointer block">
                 <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform">
@@ -95,14 +142,14 @@ export default function RecordedLecturesPage() {
                     <Link href={`/recorded-lectures/${lec.id}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c0622f] text-white text-xs font-bold rounded-lg hover:bg-[#a14f24] transition-colors">
                       <Play className="w-3.5 h-3.5 fill-white" /> Watch
                     </Link>
-                    <Link href={`/recorded-lectures/${lec.id}?tab=resources`} className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low border border-outline-variant/20 text-[#1a1a4e] text-xs font-bold rounded-lg hover:bg-surface-container transition-colors">
+                    <Link href={resourcesHref} className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low border border-outline-variant/20 text-[#1a1a4e] text-xs font-bold rounded-lg hover:bg-surface-container transition-colors">
                       <Download className="w-3.5 h-3.5" /> Resources
                     </Link>
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
     </div>

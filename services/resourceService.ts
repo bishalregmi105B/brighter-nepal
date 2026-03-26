@@ -11,8 +11,12 @@ export interface Resource {
 }
 
 export const resourceService = {
-  getResources: (params: { subject?: string; format?: string; section?: string; search?: string; page?: number; live_class_id?: number } = {}) => {
-    const filtered = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v != null))
+  getResources: (params: { subject?: string; format?: string; section?: string; search?: string; page?: number; per_page?: number; live_class_id?: number } = {}) => {
+    const filtered = Object.fromEntries(
+      Object.entries(params)
+        .filter(([, v]) => v !== '' && v != null)
+        .map(([key, value]) => [key, String(value)])
+    )
     const q = new URLSearchParams(filtered as Record<string, string>).toString()
     return api.get<{ data: { items: Resource[] } | Resource[] }>(`/api/resources${q ? '?' + q : ''}`)
   },
@@ -42,7 +46,13 @@ export const resourceService = {
     let body: {
       success?: boolean
       message?: string
-      data?: { file_url: string; filename: string; original_name: string; size_bytes: number }
+      data?: {
+        file_url: string
+        filename: string
+        original_name: string
+        size_bytes: number
+        thumbnail_url?: string
+      }
     } = {}
     try {
       body = await res.json()

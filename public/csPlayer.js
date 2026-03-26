@@ -74,6 +74,51 @@ function $(selector,parent){
     YtSetup:(videoTag,playerTagId,defaultId)=>{
     var parent = document.querySelector("#"+playerTagId).closest(".csPlayer");
     var controlsTimeout = null;
+    var liveEdgeRetryTimeouts = [];
+    var userTimelineInteracted = false;
+    function preferLiveEdgeEnabled(){
+    var params = csPlayer.csPlayers[videoTag]["params"] || {};
+    return params["preferLiveEdge"] === true || params["preferLiveEdge"] === "true";
+    }
+    function clearLiveEdgeRetries(){
+    liveEdgeRetryTimeouts.forEach(timeoutId=>clearTimeout(timeoutId));
+    liveEdgeRetryTimeouts = [];
+    csPlayer.csPlayers[videoTag]["LiveEdgeRetryTimeouts"] = [];
+    }
+    function markTimelineInteraction(){
+    userTimelineInteracted = true;
+    clearLiveEdgeRetries();
+    }
+    function syncToLiveEdge(force){
+    if(!preferLiveEdgeEnabled()) return false;
+    if(userTimelineInteracted && force !== true) return false;
+    try{
+    var player = csPlayer.csPlayers[videoTag]["videoTag"];
+    var duration = Number(player.getDuration());
+    var currentTime = Number(player.getCurrentTime());
+    if(!isFinite(duration) || duration <= 0 || !isFinite(currentTime)) return false;
+    var liveEdge = Math.max(0, duration - 1);
+    var threshold = force ? 2 : 8;
+    if((liveEdge - currentTime) > threshold){
+    player.seekTo(liveEdge, true);
+    return true;
+    }
+    }catch(exception){}
+    return false;
+    }
+    function scheduleInitialLiveEdgeSync(){
+    if(!preferLiveEdgeEnabled()) return;
+    clearLiveEdgeRetries();
+    [300, 900, 1800, 3200, 5000].forEach(delay=>{
+    var timeoutId = setTimeout(()=>{
+    if(!userTimelineInteracted){
+    syncToLiveEdge(true);
+    }
+    },delay);
+    liveEdgeRetryTimeouts.push(timeoutId);
+    });
+    csPlayer.csPlayers[videoTag]["LiveEdgeRetryTimeouts"] = liveEdgeRetryTimeouts.slice();
+    }
     return new Promise((resolve, reject) => {
       csPlayer.csPlayers[videoTag]["videoTag"] = new YT.Player(playerTagId,{
         videoId: csPlayer.csPlayers[videoTag]["params"]["defaultId"],
@@ -129,6 +174,7 @@ function $(selector,parent){
 
                   csPlayer.csPlayers[videoTag]["TextTimeInterval"] = setInterval(updateTextTime,1000);      
                   csPlayer.csPlayers[videoTag]["TimeSliderInterval"] = setInterval(updateTimeSlider,1000);         parent.querySelector(".csPlayer-controls-box .csPlayer-controls input").addEventListener("input",updateSlider);
+                  scheduleInitialLiveEdgeSync();
                   parent.querySelector(".csPlayer-controls-box .csPlayer-controls .fsBtn").addEventListener("click",toggleFullscreen);
                   document.fullscreenEnabled ? parent.querySelector(".csPlayer-controls-box .csPlayer-controls .fsBtn").style.display ="block" : parent.querySelector(".csPlayer-controls-box .csPlayer-controls .fsBtn").style.display ="none";
                   parent.querySelector(".csPlayer-controls-box .csPlayer-controls .settingsBtn").addEventListener("click",toggleSettings);
@@ -154,6 +200,7 @@ function $(selector,parent){
     }); //promise
     //backward 
     function backward(){
+    markTimelineInteraction();
     updateTextTime()
     updateTimeSlider()
     var currentTime = csPlayer.csPlayers[videoTag]["videoTag"].getCurrentTime();
@@ -163,6 +210,7 @@ function $(selector,parent){
     }
     //forward
     function forward(){
+    markTimelineInteraction();
     updateTextTime()
     updateTimeSlider()
     var currentTime = csPlayer.csPlayers[videoTag]["videoTag"].getCurrentTime();
@@ -196,6 +244,8 @@ function $(selector,parent){
     function updateTextTime(){
     var currentTime = csPlayer.csPlayers[videoTag]["videoTag"].getCurrentTime();
     var duration = csPlayer.csPlayers[videoTag]["videoTag"].getDuration();
+    currentTime = (isFinite(currentTime) && currentTime >= 0) ? currentTime : 0;
+    duration = (isFinite(duration) && duration >= 0) ? duration : 0;
     parent.querySelector(".csPlayer-controls-box .csPlayer-controls p:nth-of-type(1)").innerHTML = formatTime(String(currentTime));
     parent.querySelector(".csPlayer-controls-box .csPlayer-controls p:nth-of-type(2)").innerHTML = formatTime(String(duration));
     }
@@ -204,14 +254,22 @@ function $(selector,parent){
     var slider = parent.querySelector(".csPlayer-controls-box .csPlayer-controls div input");
     var currentTime = csPlayer.csPlayers[videoTag]["videoTag"].getCurrentTime();
     var duration = csPlayer.csPlayers[videoTag]["videoTag"].getDuration();
-    var progress = (currentTime/duration)*100;
+    var progress = 0;
+    if(isFinite(currentTime) && isFinite(duration) && duration > 0){
+    progress = (currentTime/duration)*100;
+    }
+    if(!isFinite(progress) || progress < 0) progress = 0;
+    if(progress > 100) progress = 100;
     var loaded = (csPlayer.csPlayers[videoTag]["videoTag"].getVideoLoadedFraction())*100;
+    if(!isFinite(loaded) || loaded < 0) loaded = 0;
+    if(loaded > 100) loaded = 100;
     slider.value = progress;
     slider.style.background =`linear-gradient(to right, var(--sliderSeekTrackColor) ${progress}%, transparent ${progress}%)`;
     parent.querySelector(".csPlayer-controls-box .csPlayer-controls div span").style.width = loaded+"%";
     }
     function updateSlider(){
     clearTimeout(controlsTimeout);
+    markTimelineInteraction();
     var slider = parent.querySelector(".csPlayer-controls-box .csPlayer-controls div input");
     var duration = csPlayer.csPlayers[videoTag]["videoTag"].getDuration();
     var progress = slider.value;
@@ -320,6 +378,9 @@ function $(selector,parent){
     if(event.data == YT.PlayerState.PLAYING){
     csPlayer.csPlayers[videoTag]["isPlaying"] = true;
     csPlayer.csPlayers[videoTag]["playerState"] ="playing";
+    if(!userTimelineInteracted){
+    syncToLiveEdge(true);
+    }
     parent.querySelector(".csPlayer-controls-box main .csPlayer-play-pause-btn").className ="ti csPlayer-play-pause-btn ti-player-pause-filled";
     var bottomPlay = parent.querySelector(".csPlayer-controls-box .csPlayer-controls .bottom-play-btn");
     if(bottomPlay) bottomPlay.className ="ti bottom-play-btn ti-player-pause-filled";
@@ -390,6 +451,8 @@ function $(selector,parent){
         csPlayer.csPlayers[videoTag]["params"]["thumbnail"] = params["thumbnail"];
         }if("theme" in params){
         csPlayer.csPlayers[videoTag]["params"]["theme"] = params["theme"];
+        }if("preferLiveEdge" in params){
+        csPlayer.csPlayers[videoTag]["params"]["preferLiveEdge"] = params["preferLiveEdge"];
         }
         csPlayer.csPlayers[videoTag]["isPlaying"] = false;
         csPlayer.csPlayers[videoTag]["playerState"] ="paused";
@@ -503,6 +566,9 @@ function $(selector,parent){
          }
          if("TextTimeInterval" in csPlayer.csPlayers[videoTag]){
          clearInterval(csPlayer.csPlayers[videoTag]["TextTimeInterval"]);   
+         }
+         if("LiveEdgeRetryTimeouts" in csPlayer.csPlayers[videoTag]){
+         csPlayer.csPlayers[videoTag]["LiveEdgeRetryTimeouts"].forEach(timeoutId=>clearTimeout(timeoutId));
          }
          csPlayer.csPlayers[videoTag]["videoTag"].destroy();
          delete csPlayer.csPlayers[videoTag];

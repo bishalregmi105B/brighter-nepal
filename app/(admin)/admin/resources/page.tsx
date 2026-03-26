@@ -124,6 +124,7 @@ function ResourceModal({
         ...prev,
         file_url: uploaded.file_url,
         size_label: prev.size_label || formatBytes(uploaded.size_bytes),
+        thumbnail_url: uploaded.thumbnail_url || prev.thumbnail_url,
       }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload PDF')
