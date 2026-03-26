@@ -28,7 +28,14 @@ export default function AdminNoticesPage() {
     noticeService.getNotices({ category: filter === 'All' ? '' : filter })
       .then((res) => {
         const d = res.data
-        setNotices(Array.isArray(d) ? d : (d as { items?: Notice[] }).items ?? [])
+        const items = Array.isArray(d) ? d : (d as { items?: Notice[] }).items ?? []
+        const sorted = [...items].sort((a, b) => {
+          const bt = new Date(b.created_at ?? '').getTime()
+          const at = new Date(a.created_at ?? '').getTime()
+          if (Number.isNaN(bt) || Number.isNaN(at)) return 0
+          return bt - at
+        })
+        setNotices(sorted)
       })
       .finally(() => setLoading(false))
   }

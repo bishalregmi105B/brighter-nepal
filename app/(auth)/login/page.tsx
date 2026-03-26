@@ -34,6 +34,8 @@ function LoginForm() {
       const { user } = await authService.login(identifier.trim(), password)
       if (user.role === 'admin') {
         router.replace('/admin/dashboard')
+      } else if (user.onboarding_completed === false) {
+        router.replace('/onboarding')
       } else {
         router.replace('/dashboard')
       }
@@ -117,7 +119,7 @@ function LoginForm() {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
                 <input
                   id="identifier" type="text" value={identifier} onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="name@example.com or BC-XXXX"
+                  placeholder="name@example.com or BC123456"
                   autoComplete="username"
                   className="w-full pl-12 pr-4 py-3.5 bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-on-primary-container transition-all text-on-surface placeholder:text-outline/60 font-medium"
                 />

@@ -10,7 +10,7 @@ import { modelSetService } from '@/services/modelSetService'
 import { formatCountdown } from '@/lib/utils/formatDate'
 import { getAnswerOptionClass, getQuestionBubbleClass } from '@/lib/utils/examUtils'
 import { cn } from '@/lib/utils/cn'
-import { ChevronLeft, ChevronRight, Flag, CheckSquare, Clock, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Flag, CheckSquare, Clock, Loader2, ExternalLink } from 'lucide-react'
 import type { Exam } from '@/lib/types/exam'
 import ReactMarkdown from 'react-markdown'
 
@@ -47,15 +47,22 @@ export default function ExamPage() {
   const [exam,          setExam]         = useState<Exam | null>(null)
   const [loading,       setLoading]      = useState(true)
   const [activeSubject, setActiveSubject] = useState<string>('General')   // MUST be above all early returns
+  const [formsUrl,      setFormsUrl]     = useState('')
 
   useEffect(() => {
     if (!params.id) return
     if (store.exam?.id === params.id) { setExam(store.exam); setLoading(false); return }
     modelSetService.getModelSet(Number(params.id)).then((res) => {
-      const built = buildExamFromModelSet(res.data as Parameters<typeof buildExamFromModelSet>[0])
-      if (built.questions.length > 0) {
+      const raw = res.data as Parameters<typeof buildExamFromModelSet>[0] & { forms_url?: string }
+      const externalForm = (raw.forms_url ?? '').trim()
+      setFormsUrl(externalForm)
+
+      const built = buildExamFromModelSet(raw)
+      if (!externalForm && built.questions.length > 0) {
         store.startExam(built, built.duration)
         setActiveSubject(built.questions[0]?.subject ?? 'General')
+      } else {
+        store.clearExam()
       }
       setExam(built)
     }).finally(() => setLoading(false))
@@ -71,6 +78,28 @@ export default function ExamPage() {
       <Loader2 className="w-10 h-10 animate-spin text-on-primary-container" />
     </div>
   )
+
+  if (formsUrl) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#f8f9fb] p-8 text-center">
+        <h2 className="text-2xl font-bold text-[#1a1a4e] mb-2">This Model Set Uses Google Form</h2>
+        <p className="text-slate-500 mb-6 max-w-md">The exam for this model set is hosted in Google Forms. Open it in a new tab to continue.</p>
+        <div className="flex gap-3">
+          <a
+            href={formsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-2.5 bg-[#c0622f] text-white rounded-xl font-bold hover:bg-[#a14f24] transition-colors inline-flex items-center gap-2"
+          >
+            <ExternalLink className="w-4 h-4" /> Open Google Form
+          </a>
+          <button onClick={() => router.push('/model-sets')} className="px-6 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors">
+            Back to Model Sets
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (exam.questions.length === 0) {
     return (

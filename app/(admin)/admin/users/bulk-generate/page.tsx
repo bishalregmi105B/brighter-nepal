@@ -41,7 +41,6 @@ export default function BulkGeneratePage() {
         name:     r.name.trim(),
         email:    r.email.trim() || undefined,
         plan:     r.plan,
-        password: 'Brighter@123',
       }))
       const res = await userService.bulkCreate(payload)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,7 +74,7 @@ export default function BulkGeneratePage() {
         <div>
           <h2 className="font-headline font-black text-3xl text-[#1a1a4e]">Bulk Enrollment</h2>
           <p className="text-slate-500 text-sm font-medium">
-            Create multiple student accounts. Email is optional — students can log in with their <strong>BC-XXXX</strong> ID.
+            Create multiple student accounts. Email is optional — students can log in with their <strong>BCXXXXXX</strong> ID.
           </p>
         </div>
       </div>
@@ -128,7 +127,7 @@ export default function BulkGeneratePage() {
                     <input
                       value={row.email}
                       onChange={(e) => updateRow(row.id, 'email', e.target.value)}
-                      placeholder="Optional — leave blank for BC-ID login"
+                      placeholder="Optional — leave blank for BC login"
                       type="email"
                       className="w-full px-3 py-2 bg-surface-container rounded-lg border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
                     />
@@ -173,7 +172,7 @@ export default function BulkGeneratePage() {
               <h3 className="font-bold text-on-surface">
                 {createdUsers.length} Account{createdUsers.length !== 1 ? 's' : ''} Created
               </h3>
-              <span className="text-xs font-bold text-slate-500">Default password: Brighter@123</span>
+              <span className="text-xs font-bold text-slate-500">Password = BC + Student ID</span>
             </div>
             <div className="flex items-center gap-2">
               <button

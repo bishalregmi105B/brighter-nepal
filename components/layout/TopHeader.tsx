@@ -33,8 +33,14 @@ export function TopHeader({ role, pageTitle, showSearch = true }: TopHeaderProps
     if (!loading && user) {
       noticeService.getNotices().then((res: any) => {
         const payload = res?.data?.data || res?.data || res
-        if (Array.isArray(payload)) setNotices(payload)
-        else if (payload && 'items' in payload) setNotices(payload.items as Notice[])
+        const items = Array.isArray(payload) ? payload : (payload && 'items' in payload ? payload.items as Notice[] : [])
+        const sorted = [...items].sort((a, b) => {
+          const bt = new Date(b.created_at ?? '').getTime()
+          const at = new Date(a.created_at ?? '').getTime()
+          if (Number.isNaN(bt) || Number.isNaN(at)) return 0
+          return bt - at
+        })
+        setNotices(sorted)
       }).catch(console.error)
     }
   }, [loading, user])

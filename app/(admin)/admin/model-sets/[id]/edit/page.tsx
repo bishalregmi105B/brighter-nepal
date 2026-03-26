@@ -1,7 +1,7 @@
 'use client'
 // Admin Model Set Edit — loads real data from API and allows full editing
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Trash2, BookOpen, Clock, BarChart2, Save, Loader2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, BookOpen, Clock, BarChart2, Save, Loader2, AlertCircle, Link2 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import { api } from '@/services/api'
@@ -29,6 +29,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
   const [title,        setTitle]        = useState('')
   const [duration,     setDuration]     = useState('120')
   const [level,        setLevel]        = useState('Medium')
+  const [formsUrl,     setFormsUrl]     = useState('')
   const [exams,        setExams]        = useState<string[]>([])
   const [availableExams, setAvailableExams] = useState<string[]>([])
   const [customExam,   setCustomExam]   = useState('')
@@ -48,6 +49,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
       setTitle(ms.title ?? '')
       setDuration(String(ms.duration_min ?? 120))
       setLevel(ms.difficulty ?? 'Medium')
+      setFormsUrl(ms.forms_url ?? '')
       setPublished(ms.status === 'published')
       const targets = Array.isArray(ms.targets) ? ms.targets : []
       setExams(targets)
@@ -134,6 +136,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
         difficulty: level,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         targets: exams as any,
+        forms_url: formsUrl.trim(),
         status: published ? 'published' : 'draft',
         total_questions: totalQuestions,
       })
@@ -231,6 +234,16 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
                 )}
               </div>
             </div>
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Forms URL (optional)</label>
+            <input
+              value={formsUrl}
+              onChange={e => setFormsUrl(e.target.value)}
+              placeholder="https://docs.google.com/forms/d/..."
+              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+            />
+            <p className="text-[11px] text-slate-400 mt-1.5">If provided, students can open this Google Form directly from the model set.</p>
           </div>
         </div>
       </div>

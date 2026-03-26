@@ -2,12 +2,21 @@ import { api } from './api'
 
 export interface User {
   id: number
+  student_id?: string
   name: string
   email: string
   plan: string
   status: string
   role: string
-  group_id?: number
+  group_id?: number | null
+  onboarding_completed?: boolean
+  onboarding_data?: {
+    previous_school?: string
+    location?: string
+    stream?: string
+    heard_from?: string
+    target_exams?: string[]
+  }
   created_at: string
   // Admin-only fields (returned when admin=True on backend)
   whatsapp?: string
@@ -56,6 +65,8 @@ export const userService = {
     api.get<{ data: ContactMethod[] }>('/api/users/contact-methods'),
   createContactMethod: (name: string, channel: string) =>
     api.post<{ data: ContactMethod }>('/api/users/contact-methods', { name, channel }),
+  updateContactMethod: (id: number, payload: { name?: string; channel?: string }) =>
+    api.patch<{ data: ContactMethod }>(`/api/users/contact-methods/${id}`, payload),
   deleteContactMethod: (id: number) =>
     api.delete(`/api/users/contact-methods/${id}`),
 }

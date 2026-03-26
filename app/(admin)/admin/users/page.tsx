@@ -1,9 +1,10 @@
 'use client'
 // Admin User Management — full admin view with inline editing, WhatsApp, joined_method, auto-password visibility
 import { useEffect, useState, useCallback } from 'react'
-import { Download, UserPlus, ChevronLeft, ChevronRight, Search, X, Loader2, Phone, ShieldCheck, Pencil, Check, MessageSquare, DollarSign, Plus, Trash2 } from 'lucide-react'
+import { Download, UserPlus, ChevronLeft, ChevronRight, Search, X, Loader2, Phone, ShieldCheck, Pencil, Check, MessageSquare, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { userService, type User, type ContactMethod } from '@/services/userService'
+import { groupService, type Group } from '@/services/groupService'
 import { cn } from '@/lib/utils/cn'
 
 type Tab = 'trial' | 'paid'
@@ -63,23 +64,91 @@ function ShiftModal({ user, onClose, onSuccess }: { user: User; onClose: () => v
   )
 }
 
+// ─── Onboarding Data Modal ───────────────────────────────────────────────────
+function OnboardingModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const onboarding = user.onboarding_data ?? {}
+  const exams = onboarding.target_exams ?? []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <h3 className="font-headline font-black text-xl text-[#1a1a4e]">Onboarding Details</h3>
+            <p className="text-sm text-slate-500">{user.name} · BC{user.student_id ?? String(user.id).padStart(6, '0')}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Previous School / College</p>
+            <p className="text-sm text-slate-700">{onboarding.previous_school || '—'}</p>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Location</p>
+            <p className="text-sm text-slate-700">{onboarding.location || '—'}</p>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Stream</p>
+            <p className="text-sm text-slate-700">{onboarding.stream || '—'}</p>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Heard From</p>
+            <p className="text-sm text-slate-700">{onboarding.heard_from || '—'}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 bg-slate-50 rounded-xl p-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Target Entrance Exams</p>
+          {exams.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {exams.map(exam => (
+                <span key={exam} className="px-3 py-1 rounded-full text-xs font-bold bg-[#1a1a4e]/10 text-[#1a1a4e]">
+                  {exam}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-700">—</p>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Inline Edit Row ──────────────────────────────────────────────────────────
 function EditRow({
-  user, contactMethods, onSave, onCancel,
+  user, contactMethods, groups, onSave, onCancel,
 }: {
   user: User
   contactMethods: ContactMethod[]
+  groups: Group[]
   onSave: (data: Partial<User> & { paid_amount?: number }) => Promise<void>
   onCancel: () => void
 }) {
   const [whatsapp,     setWhatsapp]     = useState(user.whatsapp ?? '')
-  const [joinedMethod, setJoinedMethod] = useState(user.joined_method ?? '')
+  const [joinedMethod, setJoinedMethod] = useState((user.joined_method ?? '').trim() || 'Legacy Account')
+  const [groupId,      setGroupId]      = useState(user.group_id ? String(user.group_id) : '')
   const [paidAmount,   setPaidAmount]   = useState(String(user.paid_amount ?? ''))
   const [saving,       setSaving]       = useState(false)
 
   const save = async () => {
     setSaving(true)
-    const payload: Partial<User> & { paid_amount?: number } = { whatsapp, joined_method: joinedMethod }
+    const payload: Partial<User> & { paid_amount?: number } = {
+      whatsapp,
+      joined_method: (joinedMethod || '').trim() || 'Legacy Account',
+      group_id: groupId ? Number(groupId) : null,
+    }
     if (paidAmount) payload.paid_amount = parseInt(paidAmount, 10)
     await onSave(payload)
     setSaving(false)
@@ -88,6 +157,10 @@ function EditRow({
   const CHANNEL_ICONS: Record<string, string> = {
     whatsapp: '📱', messenger: '💬', facebook: '👥', other: '🔗',
   }
+  const hasCurrentMethod = contactMethods.some(m => m.name === joinedMethod)
+  const methodOptions = hasCurrentMethod || !joinedMethod
+    ? contactMethods
+    : [{ id: -1, name: joinedMethod, channel: 'other', is_active: true }, ...contactMethods]
 
   return (
     <tr className="bg-blue-50/50">
@@ -109,11 +182,31 @@ function EditRow({
               className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20"
             >
               <option value="">— not set —</option>
-              {contactMethods.map(m => (
+              {methodOptions.map(m => (
                 <option key={m.id} value={m.name}>
                   {CHANNEL_ICONS[m.channel] ?? '🔗'} {m.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Chat Group */}
+          <div className="min-w-[220px]">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Chat Group</label>
+            <select
+              value={groupId}
+              onChange={e => setGroupId(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a1a4e]/20"
+            >
+              <option value="">— no group —</option>
+              {groups.map(g => {
+                const count = g.current_member_count ?? g.member_count ?? 0
+                return (
+                  <option key={g.id} value={String(g.id)}>
+                    {g.name} ({count} members)
+                  </option>
+                )
+              })}
             </select>
           </div>
 
@@ -155,8 +248,10 @@ export default function UserManagementPage() {
   const [loading,  setLoading]  = useState(true)
   const [stats,    setStats]    = useState({ total_users: 0, paid_users: 0, trial_users: 0, total_payment: 0, today_payment: 0 })
   const [shifting, setShifting] = useState<User | null>(null)
+  const [viewingOnboarding, setViewingOnboarding] = useState<User | null>(null)
   const [editing,  setEditing]  = useState<number | null>(null)
   const [contactMethods, setContactMethods] = useState<ContactMethod[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
 
   const loadStats = useCallback(() => {
     userService.getStats().then(r => setStats(r.data as typeof stats)).catch(() => {})
@@ -175,6 +270,11 @@ export default function UserManagementPage() {
     userService.getContactMethods()
       .then(r => { const d = r.data; setContactMethods(Array.isArray(d) ? d : (d as { data?: ContactMethod[] })?.data ?? []) })
       .catch(() => {})
+  }, [])
+  useEffect(() => {
+    groupService.getGroups()
+      .then(r => setGroups(r.data?.items ?? []))
+      .catch(() => setGroups([]))
   }, [])
 
   const totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE))
@@ -204,6 +304,9 @@ export default function UserManagementPage() {
       {shifting && (
         <ShiftModal user={shifting} onClose={() => setShifting(null)}
           onSuccess={() => { loadStats(); fetchUsers(tab, query, page) }} />
+      )}
+      {viewingOnboarding && (
+        <OnboardingModal user={viewingOnboarding} onClose={() => setViewingOnboarding(null)} />
       )}
 
       {/* Header */}
@@ -278,7 +381,7 @@ export default function UserManagementPage() {
                     {/* Student ID */}
                     <td className="px-4 py-4">
                       <span className="font-mono text-xs font-black text-[#1a1a4e] bg-surface-container-low px-2 py-1 rounded-lg">
-                        BC-{String(u.id).padStart(4, '0')}
+                        BC{u.student_id ?? String(u.id).padStart(6, '0')}
                       </span>
                     </td>
                     {/* Name + password */}
@@ -309,12 +412,17 @@ export default function UserManagementPage() {
                     </td>
                     {/* Joined method */}
                     <td className="px-4 py-4">
-                      {u.joined_method ? (
+                      {(u.joined_method ?? '').trim() ? (
                         <div className="flex items-center gap-1.5 text-xs text-slate-500">
                           <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
                           <span className="max-w-[120px] truncate">{u.joined_method}</span>
                         </div>
-                      ) : <span className="text-slate-300 text-sm">—</span>}
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="max-w-[120px] truncate">Legacy Account</span>
+                        </div>
+                      )}
                     </td>
                     {/* Joined date */}
                     <td className="px-4 py-4 text-sm text-on-surface-variant whitespace-nowrap">{u.created_at?.slice(0, 10)}</td>
@@ -349,6 +457,12 @@ export default function UserManagementPage() {
                           className="flex items-center gap-1 px-2.5 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50">
                           <Pencil className="w-3 h-3" /> Edit
                         </button>
+                        <button
+                          onClick={() => setViewingOnboarding(u)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50"
+                        >
+                          <Eye className="w-3 h-3" /> Onboarding
+                        </button>
                         {u.plan === 'trial' && (
                           <button onClick={() => setShifting(u)}
                             className="flex items-center gap-1 px-2.5 py-1.5 bg-[#c0622f] text-white rounded-lg text-xs font-bold hover:bg-[#a14f24]">
@@ -362,6 +476,7 @@ export default function UserManagementPage() {
                   editing === u.id && (
                     <EditRow key={`edit-${u.id}`} user={u}
                       contactMethods={contactMethods}
+                      groups={groups}
                       onSave={data => saveEdit(u, data)}
                       onCancel={() => setEditing(null)} />
                   ),

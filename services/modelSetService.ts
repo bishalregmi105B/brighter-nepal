@@ -3,6 +3,7 @@ import { api } from './api'
 export interface ModelSet {
   id: number; title: string; difficulty: string; duration_min: number
   total_questions: number; status: string; targets: string[]; created_at: string
+  forms_url?: string
 }
 export interface PaginatedModelSets {
   data: { items: ModelSet[]; total: number; page: number }

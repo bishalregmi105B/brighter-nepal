@@ -3,7 +3,7 @@
 // On mount, checks for a valid token. Redirects to /login if missing.
 // Redirects admin to /admin/dashboard, student to /dashboard based on role.
 import { useEffect, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 
 interface AuthGuardProps {
@@ -15,6 +15,7 @@ interface AuthGuardProps {
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (loading) return
@@ -27,8 +28,13 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     // Wrong role? Redirect to the appropriate home
     if (requiredRole && user.role !== requiredRole) {
       router.replace(user.role === 'admin' ? '/admin/dashboard' : '/dashboard')
+      return
     }
-  }, [loading, user, requiredRole, router])
+    // Student must complete onboarding once before entering student area.
+    if (user.role === 'student' && user.onboarding_completed === false && pathname !== '/onboarding') {
+      router.replace('/onboarding')
+    }
+  }, [loading, user, requiredRole, router, pathname])
 
   // While loading show a branded spinner
   if (loading || !user) {

@@ -26,7 +26,13 @@ export default function StudentDashboardPage() {
     ]).then(([dash, me, nots]) => {
       setData((dash as { data: DashboardData }).data)
       setUser(me as AuthUser | null)
-      setNotices(((nots as { data: Notice[] }).data ?? []).slice(0, 3))
+      const sortedNotices = [...((nots as { data: Notice[] }).data ?? [])].sort((a, b) => {
+        const bt = new Date(b.created_at ?? '').getTime()
+        const at = new Date(a.created_at ?? '').getTime()
+        if (Number.isNaN(bt) || Number.isNaN(at)) return 0
+        return bt - at
+      })
+      setNotices(sortedNotices.slice(0, 3))
     }).finally(() => setLoading(false))
   }, [])
 

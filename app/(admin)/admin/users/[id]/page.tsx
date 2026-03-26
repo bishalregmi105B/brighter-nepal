@@ -61,7 +61,7 @@ export default function UserDetailPage() {
           <div className="bg-white rounded-2xl p-6 shadow-[0_8px_20px_rgba(25,28,30,0.04)] text-center">
             <div className="w-20 h-20 rounded-full bg-on-primary-container text-white text-2xl font-black flex items-center justify-center mx-auto mb-3">{initials}</div>
             <h3 className="font-headline font-bold text-xl text-[#1a1a4e]">{user.name}</h3>
-            <p className="text-xs text-outline font-medium">BC-{String(user.id).padStart(4,'0')}</p>
+            <p className="text-xs text-outline font-medium">BC{user.student_id ?? String(user.id).padStart(6,'0')}</p>
             <div className="mt-5 space-y-3 text-left">
               <div className="flex items-center gap-2 text-sm text-slate-600"><Mail className="w-4 h-4 text-outline" />{user.email ?? '—'}</div>
               <div className="flex items-center gap-2 text-sm text-slate-600"><Calendar className="w-4 h-4 text-outline" />Joined {user.created_at?.slice(0,10)}</div>

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   Plus, Search, Trash2, FileText, Video, Headphones, Globe, FileArchive,
-  Link2, X, Loader2, Pencil, BookOpen, Eye
+  Link2, X, Loader2, Pencil, BookOpen, Eye, Upload
 } from 'lucide-react'
 import { resourceService, type Resource } from '@/services/resourceService'
 import { cn } from '@/lib/utils/cn'
@@ -65,6 +65,18 @@ const EMPTY_FORM = {
 
 type FormState = typeof EMPTY_FORM
 
+function formatBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return ''
+  const units = ['B', 'KB', 'MB', 'GB']
+  let size = bytes
+  let idx = 0
+  while (size >= 1024 && idx < units.length - 1) {
+    size /= 1024
+    idx += 1
+  }
+  return `${size >= 10 ? size.toFixed(0) : size.toFixed(1)} ${units[idx]}`
+}
+
 // ── Modal Component ──────────────────────────────────────────────────────────
 function ResourceModal({
   initial, subjects, onClose, onSaved,
@@ -88,6 +100,7 @@ function ResourceModal({
   } : { ...EMPTY_FORM, subject: subjects[0] || '' })
   const [customSubject, setCustomSubject] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploadingPdf, setUploadingPdf] = useState(false)
   const [error,  setError]  = useState('')
 
   const cfg = TYPE_CONFIG[form.format] ?? TYPE_CONFIG.pdf
@@ -95,6 +108,28 @@ function ResourceModal({
 
   function set(key: keyof FormState, value: string) {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  async function handlePdfUpload(file: File) {
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Please select a .pdf file.')
+      return
+    }
+    setUploadingPdf(true)
+    setError('')
+    try {
+      const uploaded = await resourceService.uploadPdf(file)
+      setForm(prev => ({
+        ...prev,
+        file_url: uploaded.file_url,
+        size_label: prev.size_label || formatBytes(uploaded.size_bytes),
+      }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload PDF')
+    } finally {
+      setUploadingPdf(false)
+    }
   }
 
   async function handleSave() {
@@ -178,6 +213,26 @@ function ResourceModal({
           {/* URL field — dynamic label */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">{cfg.urlLabel} *</label>
+            {form.format === 'pdf' && (
+              <div className="mb-2 p-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/70">
+                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50">
+                  {uploadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  Upload PDF to Server
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="hidden"
+                    disabled={uploadingPdf}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0]
+                      if (f) await handlePdfUpload(f)
+                      e.currentTarget.value = ''
+                    }}
+                  />
+                </label>
+                <p className="mt-2 text-[11px] text-slate-500">Use this for reliable in-app preview. Uploaded files are hosted by your backend.</p>
+              </div>
+            )}
             <input
               value={form.file_url}
               onChange={e => set('file_url', e.target.value)}

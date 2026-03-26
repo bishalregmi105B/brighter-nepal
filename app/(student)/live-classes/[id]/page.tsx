@@ -138,6 +138,7 @@ export default function LiveClassRoomPage() {
           <SecureVideoPlayer
             videoUrl={cls?.stream_url ?? ''}
             title={cls?.title}
+            preferLiveEdge
             className="w-full h-full rounded-none aspect-auto"
           />
         </div>

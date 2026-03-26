@@ -4,9 +4,26 @@ import { forceLogout } from './api'
 export interface AuthUser {
   id: number; name: string; email: string; plan: string; status: string; role: string
   group_id?: number; device_count?: number; created_at?: string
+  student_id?: string
+  onboarding_completed?: boolean
+  onboarding_data?: {
+    previous_school?: string
+    location?: string
+    stream?: string
+    heard_from?: string
+    target_exams?: string[]
+  }
 }
 export interface AuthResponse {
   data: { token: string; user: AuthUser }
+}
+
+export interface CompleteOnboardingPayload {
+  previous_school?: string
+  location?: string
+  stream?: string
+  heard_from?: string
+  target_exams?: string[]
 }
 
 export const authService = {
@@ -30,6 +47,12 @@ export const authService = {
 
   async getMe(): Promise<AuthUser> {
     const res = await api.get<{ data: AuthUser }>('/api/auth/me')
+    if (res.data) localStorage.setItem('bn_user', JSON.stringify(res.data))
+    return res.data
+  },
+
+  async completeOnboarding(payload: CompleteOnboardingPayload): Promise<AuthUser> {
+    const res = await api.post<{ data: AuthUser }>('/api/auth/complete-onboarding', payload)
     if (res.data) localStorage.setItem('bn_user', JSON.stringify(res.data))
     return res.data
   },

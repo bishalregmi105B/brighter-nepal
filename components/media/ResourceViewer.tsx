@@ -38,21 +38,52 @@ interface Props {
   className?: string
 }
 
-/** Convert a Google Docs / Slides share URL to embeddable format */
-function toGoogleEmbedUrl(url: string): string {
-  // Google Docs: https://docs.google.com/document/d/ID/edit  →  .../preview
-  // Google Slides: https://docs.google.com/presentation/d/ID/edit  →  .../embed
-  if (url.includes('docs.google.com/presentation')) {
-    return url.replace(/\/edit.*$/, '/embed?start=false&loop=false&delayms=3000')
+function toGoogleEmbedUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl
+
+  try {
+    const parsed = new URL(rawUrl)
+    const host = parsed.hostname.toLowerCase()
+    const path = parsed.pathname
+
+    if (host === 'docs.google.com') {
+      const parts = path.split('/').filter(Boolean)
+      const type = parts[0]
+      const id = parts[2]
+      if (id && type === 'presentation') {
+        return `https://docs.google.com/presentation/d/${id}/embed?start=false&loop=false&delayms=3000`
+      }
+      if (id && type === 'document') {
+        return `https://docs.google.com/document/d/${id}/preview`
+      }
+      if (id && type === 'spreadsheets') {
+        return `https://docs.google.com/spreadsheets/d/${id}/preview`
+      }
+      return rawUrl
+    }
+
+    if (host === 'drive.google.com') {
+      const resourceKey = parsed.searchParams.get('resourcekey')
+      const buildPreview = (fileId: string) =>
+        `https://drive.google.com/file/d/${fileId}/preview${resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : ''}`
+
+      const fileMatch = path.match(/^\/file\/d\/([^/]+)/)
+      if (fileMatch?.[1]) {
+        return buildPreview(fileMatch[1])
+      }
+
+      if (path === '/open' || path === '/uc') {
+        const fileId = parsed.searchParams.get('id')
+        if (fileId) return buildPreview(fileId)
+      }
+
+      return rawUrl
+    }
+
+    return rawUrl
+  } catch {
+    return rawUrl
   }
-  if (url.includes('docs.google.com/document')) {
-    return url.replace(/\/edit.*$/, '/preview')
-  }
-  if (url.includes('docs.google.com/spreadsheets')) {
-    return url.replace(/\/edit.*$/, '/preview')
-  }
-  // Already an embed URL — return as-is
-  return url
 }
 
 /** File extension icon helper */
@@ -128,6 +159,7 @@ export function ResourceViewer({ resource, className }: Props) {
     if (!url || url === '#') {
       return <EmptyViewer message="No link URL provided." />
     }
+    const embedUrl = toGoogleEmbedUrl(url)
     return (
       <div className={cn('bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] overflow-hidden', className)}>
         {/* Toolbar */}
@@ -144,7 +176,7 @@ export function ResourceViewer({ resource, className }: Props) {
         {/* Embedded preview via iframe */}
         <div className="relative overflow-hidden bg-slate-50" style={{ height: '75vh', minHeight: '500px' }}>
           <iframe
-            src={url}
+            src={embedUrl}
             className="w-full h-full border-0"
             title={resource.title}
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"

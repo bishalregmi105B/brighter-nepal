@@ -1,7 +1,12 @@
 import { api } from './api'
 
 export interface Group {
-  id: number; name: string; description: string; member_count: number; created_at: string
+  id: number
+  name: string
+  description: string
+  member_count: number
+  current_member_count?: number
+  created_at: string
 }
 export interface GroupMessage {
   id: number; group_id: number; user_id: number; sender_name: string; text: string; image_url: string; created_at: string
@@ -11,6 +16,8 @@ export const groupService = {
   /** Returns the group assigned to the currently-logged-in student (admin-controlled) */
   getMyGroup: () =>
     api.get<{ data: Group }>('/api/groups/mine'),
+  getGroups: () =>
+    api.get<{ data: { items: Group[] } }>('/api/groups'),
   getGroup: (id: number) =>
     api.get<{ data: Group }>(`/api/groups/${id}`),
   getGroupMessages: (groupId: number, limit = 30, before?: number) => {

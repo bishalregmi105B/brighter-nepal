@@ -33,9 +33,18 @@ export default function LiveClassesPage() {
     }).finally(() => setLoading(false))
   }, [])
 
+  const byLatestSchedule = (a: LiveClass, b: LiveClass) => {
+    const bTime = new Date(b.scheduled_at ?? b.created_at ?? '').getTime()
+    const aTime = new Date(a.scheduled_at ?? a.created_at ?? '').getTime()
+    if (Number.isNaN(bTime) || Number.isNaN(aTime)) return b.id - a.id
+    return bTime - aTime
+  }
+
   const current   = classes.filter((c) => c.status === 'live' || c.status === 'upcoming' || c.status === 'locked')
   const completed = classes.filter((c) => c.status === 'completed')
   const liveCount = classes.filter((c) => c.status === 'live').length
+  const featuredLive = [...classes.filter((c) => c.status === 'live')].sort(byLatestSchedule)[0] ?? null
+  const currentWithoutFeatured = featuredLive ? current.filter((c) => c.id !== featuredLive.id) : current
 
   // Build "history" from completed classes — alternate joined/missed for demo
   const history = completed.map((c, i) => ({
@@ -70,16 +79,55 @@ export default function LiveClassesPage() {
         )}
       </div>
 
+      {/* Featured Live Session */}
+      {featuredLive && (
+        <section className="relative overflow-hidden rounded-3xl bg-on-secondary-fixed text-white p-8 md:p-12 shadow-2xl">
+          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-on-primary-container/20 to-transparent pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="w-full md:w-1/2 space-y-5">
+              <div className="inline-flex items-center gap-2 bg-on-primary-container px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> Latest Live Session
+              </div>
+              <h2 className="text-3xl md:text-4xl font-headline font-extrabold tracking-tight leading-tight">
+                {featuredLive.title}
+              </h2>
+              <p className="text-base opacity-85 font-medium">
+                {featuredLive.subject} · {featuredLive.teacher} · {featuredLive.duration_min} mins
+              </p>
+              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full text-xs font-semibold">
+                <Users className="w-3.5 h-3.5" /> {(featuredLive.watchers ?? 0).toLocaleString()} watching now
+              </div>
+            </div>
+            <div className="w-full md:w-1/2">
+              <div className="bg-[#1a1a4e]/70 rounded-2xl p-6 border border-white/10">
+                <div className="flex items-center justify-center h-40 md:h-48 bg-[#1a1a4e] rounded-xl mb-5 relative">
+                  <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                    <Play className="w-8 h-8 text-white fill-white" />
+                  </div>
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-500/90 px-2.5 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    <span className="text-white text-[10px] font-black tracking-widest">LIVE</span>
+                  </div>
+                </div>
+                <Link href={`/live-classes/${featuredLive.id}`} className="w-full block bg-[#c0622f] text-white text-base font-black px-6 py-3.5 rounded-xl text-center hover:bg-[#a14f24] active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
+                  Join Now →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Today's Sessions */}
       <section className="space-y-4">
         <h2 className="text-xl font-headline font-bold text-[#1a1a4e] flex items-center gap-2">
           <CalendarDays className="w-5 h-5 text-on-primary-container" /> Today&apos;s Sessions
         </h2>
-        {current.length === 0 ? (
+        {currentWithoutFeatured.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl text-slate-400 font-medium">No sessions scheduled today.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {current.map((cls) => (
+            {currentWithoutFeatured.map((cls) => (
               <div key={cls.id} className={cn(
                 'bg-white rounded-2xl overflow-hidden shadow-[0_8px_20px_rgba(25,28,30,0.04)] flex flex-col transition-all duration-300',
                 cls.status === 'live' ? 'ring-2 ring-on-primary-container/30' : 'hover:shadow-xl'

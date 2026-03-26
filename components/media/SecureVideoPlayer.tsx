@@ -5,7 +5,7 @@
  *  - Disables right click
  */
 import { useEffect, useRef, useState } from 'react'
-import { Maximize2, ShieldCheck, PlayCircle } from 'lucide-react'
+import { ShieldCheck, PlayCircle } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 // Extend window for csPlayer
@@ -14,6 +14,7 @@ declare global {
     csPlayer?: {
       init: (id: string, options: any) => Promise<void>
       destroy: (id: string) => void
+      csPlayers?: Record<string, { videoTag?: unknown }>
     }
     onYouTubeIframeAPIReady?: () => void
     YT?: any
@@ -24,6 +25,7 @@ interface SecureVideoPlayerProps {
   videoUrl:   string
   title?:     string
   className?: string
+  preferLiveEdge?: boolean
 }
 
 /** Extract YouTube video ID from any YT URL format */
@@ -42,7 +44,7 @@ function extractYouTubeId(url: string): string | null {
 }
 
 export function SecureVideoPlayer({
-  videoUrl, title, className
+  videoUrl, title, className, preferLiveEdge = false
 }: SecureVideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const playerDivRef = useRef<HTMLDivElement>(null)
@@ -104,6 +106,34 @@ export function SecureVideoPlayer({
 
   useEffect(() => {
     let localPlayerId: string | null = null;
+    const liveEdgeSyncTimers: number[] = []
+
+    const syncToLiveEdge = (playerId: string): boolean => {
+      const player = window.csPlayer?.csPlayers?.[playerId]?.videoTag as
+        | { getDuration?: () => number; getCurrentTime?: () => number; seekTo?: (seconds: number, allowSeekAhead?: boolean) => void }
+        | undefined
+
+      if (!player?.getDuration || !player?.getCurrentTime || !player?.seekTo) return false
+
+      const duration = Number(player.getDuration())
+      if (!Number.isFinite(duration) || duration <= 0) return false
+
+      const current = Number(player.getCurrentTime())
+      const liveEdge = Math.max(duration - 1, 0)
+      if (!Number.isFinite(current) || liveEdge - current > 8) {
+        player.seekTo(liveEdge, true)
+      }
+      return true
+    }
+
+    const scheduleLiveEdgeSync = (playerId: string) => {
+      if (!preferLiveEdge) return
+      // Retry a few times because duration metadata for live streams can arrive late.
+      ;[800, 2000, 4500, 8000, 12000].forEach((delay) => {
+        const timer = window.setTimeout(() => { syncToLiveEdge(playerId) }, delay)
+        liveEdgeSyncTimers.push(timer)
+      })
+    }
 
     if (areScriptsReady && ytId && playerDivRef.current) {
       const div = playerDivRef.current;
@@ -139,6 +169,7 @@ export function SecureVideoPlayer({
         }).then(() => {
           const indicator = div.querySelector('.video-loading-indicator');
           if (indicator) div.removeChild(indicator);
+          scheduleLiveEdgeSync(newId)
         }).catch(() => {
           setPlayerError('Failed to load video via csPlayer.')
           const indicator = div.querySelector('.video-loading-indicator');
@@ -151,6 +182,7 @@ export function SecureVideoPlayer({
     }
 
     return () => {
+       liveEdgeSyncTimers.forEach((t) => window.clearTimeout(t))
        const idToClean = localPlayerId || currentPlayerIdRef.current;
        if (idToClean && window.csPlayer && document.getElementById(idToClean)) {
          try { window.csPlayer.destroy(idToClean); } catch {}
@@ -159,7 +191,7 @@ export function SecureVideoPlayer({
          currentPlayerIdRef.current = null;
        }
     };
-  }, [areScriptsReady, ytId]);
+  }, [areScriptsReady, ytId, preferLiveEdge]);
 
   const blockContextMenu = (e: React.MouseEvent) => e.preventDefault()
 

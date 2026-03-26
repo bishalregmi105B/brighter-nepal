@@ -2,7 +2,7 @@
 // Student Model Sets — fetches real data from modelSetService
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, Flame, BookCheck, Timer, Play, ChevronDown, CheckCircle2, Target, Loader2, Lock, Eye } from 'lucide-react'
+import { BookCheck, Timer, Play, ChevronDown, Target, Loader2, ExternalLink } from 'lucide-react'
 import { modelSetService, type ModelSet } from '@/services/modelSetService'
 import { cn } from '@/lib/utils/cn'
 import { DeveloperWatermark } from '@/components/ui/DeveloperWatermark'
@@ -136,16 +136,31 @@ export default function ModelSetsPage() {
 
                 <div className="mt-auto flex items-center justify-between">
                   <DifficultyPill difficulty={set.difficulty} featured={isFeatured} />
-                  <Link
-                    href={`/model-sets/${set.id}`}
-                    className={cn(
-                      'font-bold px-6 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 text-sm shadow-sm',
-                      isFeatured ? 'bg-on-primary-container text-white hover:shadow-[0_0_20px_rgba(207,110,58,0.4)]'
-                      : 'bg-on-primary-container text-white hover:opacity-90'
-                    )}
-                  >
-                    <Play className="w-4 h-4 fill-current" /> Start Exam
-                  </Link>
+                  {set.forms_url ? (
+                    <a
+                      href={set.forms_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        'font-bold px-6 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 text-sm shadow-sm',
+                        isFeatured ? 'bg-on-primary-container text-white hover:shadow-[0_0_20px_rgba(207,110,58,0.4)]'
+                        : 'bg-on-primary-container text-white hover:opacity-90'
+                      )}
+                    >
+                      <ExternalLink className="w-4 h-4" /> Open Form
+                    </a>
+                  ) : (
+                    <Link
+                      href={`/model-sets/${set.id}`}
+                      className={cn(
+                        'font-bold px-6 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 text-sm shadow-sm',
+                        isFeatured ? 'bg-on-primary-container text-white hover:shadow-[0_0_20px_rgba(207,110,58,0.4)]'
+                        : 'bg-on-primary-container text-white hover:opacity-90'
+                      )}
+                    >
+                      <Play className="w-4 h-4 fill-current" /> Start Exam
+                    </Link>
+                  )}
                 </div>
 
                 {isFeatured && (

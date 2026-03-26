@@ -1,49 +1,56 @@
 'use client'
-// Admin Live Class Monitor — fetches real class data + group chat via API
+// Admin Live Class Monitor — real-time chat + live stream monitoring
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Users, MessageSquare, Hand, Send, StopCircle, Mic, MicOff, Video, VideoOff, Loader2 } from 'lucide-react'
+import { ArrowLeft, Users, MessageSquare, Send, StopCircle, Mic, MicOff, Video, VideoOff, Loader2, Wifi, WifiOff } from 'lucide-react'
 import Link from 'next/link'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
-import { groupService, type GroupMessage } from '@/services/groupService'
+import { useLiveChat } from '@/hooks/useLiveChat'
+import { authService, type AuthUser } from '@/services/authService'
 import { SecureVideoPlayer } from '@/components/media/SecureVideoPlayer'
 import { cn } from '@/lib/utils/cn'
 
 export default function LiveClassMonitorPage() {
   const params      = useParams<{ id: string }>()
   const [cls,       setCls]      = useState<LiveClass | null>(null)
-  const [chat,      setChat]     = useState<GroupMessage[]>([])
+  const [user,      setUser]     = useState<AuthUser | null>(null)
   const [loading,   setLoading]  = useState(true)
   const [msgInput,  setMsgInput] = useState('')
   const [micOn,     setMicOn]    = useState(true)
   const [camOn,     setCamOn]    = useState(true)
-  const [activeTab, setActiveTab] = useState<'chat' | 'hands'>('chat')
-  const [sending,   setSending]  = useState(false)
+  const [activeTab, setActiveTab] = useState<'chat' | 'qa'>('chat')
   const messagesEnd = useRef<HTMLDivElement>(null)
+
+  const classId = cls?.id ?? null
+  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected } = useLiveChat(classId)
 
   useEffect(() => {
     if (!params.id) return
-    liveClassService.getClass(Number(params.id)).then((res) => {
-      const c = res.data
-      setCls(c)
-      if (c.group_id) {
-        groupService.getGroupMessages(c.group_id, 50).then((r) => setChat(r.data?.items ?? []))
-      }
-    }).finally(() => setLoading(false))
+    authService.getMe().then(u => setUser(u)).catch(() => {})
+
+    const fetchClass = () => {
+      liveClassService.getClass(Number(params.id)).then((res) => {
+        setCls(res.data)
+      }).finally(() => setLoading(false))
+    }
+
+    fetchClass()
+    const interval = setInterval(fetchClass, 20_000)
+    return () => clearInterval(interval)
   }, [params.id])
 
-  useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [chat])
+  useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  const sendMsg = async () => {
-    if (!msgInput.trim() || !cls?.group_id) return
-    setSending(true)
-    try {
-      await groupService.sendMessage(cls.group_id, msgInput.trim())
-      const res = await groupService.getGroupMessages(cls.group_id, 50)
-      setChat(res.data?.items ?? [])
-      setMsgInput('')
-    } catch {}
-    setSending(false)
+  const sendMsg = () => {
+    if (!msgInput.trim()) return
+    sendMessage(msgInput.trim())
+    setMsgInput('')
+    setTyping(false)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMsgInput(e.target.value)
+    setTyping(e.target.value.length > 0)
   }
 
   const endSession = () => {
@@ -71,7 +78,7 @@ export default function LiveClassMonitorPage() {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-white/70 text-sm font-medium">
-            <Users className="w-4 h-4" /> <span className="font-bold text-white">{(cls?.watchers ?? 0).toLocaleString()}</span> watching
+            <Users className="w-4 h-4" /> <span className="font-bold text-white">{(onlineCount || cls?.watchers || 0).toLocaleString()}</span> watching
           </div>
           <button onClick={() => setMicOn(!micOn)} className={cn('p-2.5 rounded-xl transition-colors', micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-error/30 text-error')}>
             {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
@@ -90,13 +97,14 @@ export default function LiveClassMonitorPage() {
           <SecureVideoPlayer
             videoUrl={cls?.stream_url ?? ''}
             title={cls?.title}
+            preferLiveEdge
             className="w-full h-full rounded-none aspect-auto"
           />
           <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-4 pointer-events-none">
             {[
-              { label: 'Watching',      value: (cls?.watchers ?? 0).toLocaleString() },
-              { label: 'Chat Messages', value: chat.length.toString()                },
-              { label: 'Group',         value: cls?.group_id ? `#${cls.group_id}` : 'None' },
+              { label: 'Watching',      value: (onlineCount || cls?.watchers || 0).toLocaleString() },
+              { label: 'Chat Messages', value: messages.length.toString()                               },
+              { label: 'Live Room',     value: cls?.id ? `#${cls.id}` : 'None'                          },
             ].map((s) => (
               <div key={s.label} className="bg-black/50 backdrop-blur-sm rounded-xl px-4 py-3 text-center">
                 <p className="text-white font-black text-xl">{s.value}</p>
@@ -109,47 +117,71 @@ export default function LiveClassMonitorPage() {
         <div className="w-80 bg-white flex flex-col flex-shrink-0 border-l border-white/10">
           <div className="flex border-b border-surface-container flex-shrink-0">
             <button onClick={() => setActiveTab('chat')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'chat' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
-              <MessageSquare className="w-4 h-4" /> Chat ({chat.length})
+              <MessageSquare className="w-4 h-4" /> Chat ({messages.length})
             </button>
-            <button onClick={() => setActiveTab('hands')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'hands' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
-              <Hand className="w-4 h-4" /> Hands
+            <button onClick={() => setActiveTab('qa')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'qa' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
+              <MessageSquare className="w-4 h-4" /> Q&amp;A
             </button>
+            <div className="flex items-center px-3">
+              {connected
+                ? <span title="Connected"><Wifi className="w-3.5 h-3.5 text-green-500" /></span>
+                : <span title="Reconnecting…"><WifiOff className="w-3.5 h-3.5 text-slate-400 animate-pulse" /></span>}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            {activeTab === 'chat' ? (
-              <div className="space-y-4">
-                {chat.length === 0 && <p className="text-center text-outline text-xs py-6">No messages yet.</p>}
-                {chat.map((msg) => (
-                  <div key={msg.id} className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-1">
+            <div className="space-y-4">
+              {messages.length === 0 && <p className="text-center text-outline text-xs py-6">No messages yet. Be first to chat!</p>}
+              {messages.map((msg) => {
+                const isMe = msg.user_id === user?.id
+                return (
+                  <div key={msg.id} className={cn("flex flex-col", isMe && "items-end")}>
+                    <div className={cn("flex items-center gap-2 mb-1", isMe && "flex-row-reverse")}>
                       <div className="w-5 h-5 rounded-full bg-[#1a1a4e] flex items-center justify-center text-[8px] font-black text-white">{(msg.sender_name ?? 'U')[0]}</div>
-                      <span className="text-[11px] font-bold text-[#1a1a4e]">{msg.sender_name ?? 'User'}</span>
+                      <span className="text-[11px] font-bold text-[#1a1a4e]">{isMe ? 'You' : msg.sender_name ?? 'User'}</span>
                       <span className="text-[10px] text-slate-300 ml-auto">{new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
                     </div>
-                    <p className="text-xs text-slate-700 leading-relaxed pl-7">{msg.text}</p>
+                    <div className={cn("px-3 py-2 rounded-xl text-xs leading-relaxed max-w-[85%]",
+                      isMe ? "bg-[#c0622f] text-white rounded-tr-none" : "bg-slate-100 text-slate-700 rounded-tl-none")}>
+                      {msg.text}
+                    </div>
                   </div>
-                ))}
-                <div ref={messagesEnd} />
-              </div>
-            ) : (
-              <div className="text-center py-10 text-outline text-xs">No hands raised yet.</div>
-            )}
+                )
+              })}
+              {typingUsers.length > 0 && (
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 pl-1">
+                  <span className="flex gap-0.5">
+                    <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </span>
+                  {typingUsers[0].name} is typing…
+                </div>
+              )}
+              <div ref={messagesEnd} />
+            </div>
           </div>
 
-          {activeTab === 'chat' && cls?.group_id && (
-            <div className="p-3 border-t border-surface-container flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <input value={msgInput} onChange={(e) => setMsgInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMsg()}
-                  placeholder="Send announcement..." className="flex-1 px-3 py-2 bg-surface-container rounded-lg text-sm border-none focus:ring-2 focus:ring-on-primary-container/20" />
-                <button onClick={sendMsg} disabled={!msgInput.trim() || sending}
-                  className="p-2.5 bg-on-primary-container text-white rounded-lg hover:opacity-90 disabled:opacity-30 transition-all">
-                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
-              </div>
+          <div className="p-3 border-t border-surface-container flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <input
+                value={msgInput}
+                onChange={handleInputChange}
+                onKeyDown={(e) => e.key === 'Enter' && sendMsg()}
+                onBlur={() => setTyping(false)}
+                placeholder={connected ? 'Type a message…' : 'Reconnecting…'}
+                disabled={!connected}
+                className="flex-1 px-3 py-2 bg-surface-container rounded-lg text-sm border-none focus:ring-2 focus:ring-on-primary-container/20 disabled:opacity-50"
+              />
+              <button
+                onClick={sendMsg}
+                disabled={!msgInput.trim() || !connected}
+                className="p-2.5 bg-on-primary-container text-white rounded-lg hover:opacity-90 disabled:opacity-30 transition-all"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

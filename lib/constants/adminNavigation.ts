@@ -35,6 +35,7 @@ export const adminNavItems: AdminNavItem[] = [
       { href: '/admin/users?tab=trial',     label: 'Trial' },
       { href: '/admin/users?tab=paid',      label: 'Paid' },
       { href: '/admin/users/bulk-generate', label: 'Bulk Generate' },
+      { href: '/admin/users/joined-via',    label: 'Joined Via' },
     ],
   },
   { href: '/admin/payments',      label: 'Payments',      icon: CreditCard },
