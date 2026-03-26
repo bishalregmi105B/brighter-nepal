@@ -1,34 +1,11 @@
-export function toStudentGoogleFormUrl(value?: string | null): string {
-  const raw = String(value || '').trim()
-  if (!raw) return ''
+export function toStudentGoogleFormUrl(value?: string | null, legacyFallback?: string | null): string {
+  const primary = String(value || '').trim()
+  if (primary) return primary
 
-  // Allow plain form IDs as a fallback.
-  if (/^[A-Za-z0-9_-]{20,}$/.test(raw)) {
-    return `https://docs.google.com/forms/d/e/${raw}/viewform`
-  }
+  // Backward compatibility for older rows where only forms_url existed.
+  // Do not auto-convert path formats anymore; accept only explicit responder URLs here.
+  const fallback = String(legacyFallback || '').trim()
+  if (fallback && /\/viewform(?:[/?#]|$)/i.test(fallback)) return fallback
 
-  try {
-    const parsed = new URL(raw)
-    const host = parsed.hostname.toLowerCase()
-    if (!host.endsWith('google.com')) return raw
-
-    const parts = parsed.pathname.split('/').filter(Boolean)
-    const suffix = `${parsed.search}${parsed.hash}`
-
-    // /forms/d/e/<id>/...
-    if (parts.length >= 4 && parts[0] === 'forms' && parts[1] === 'd' && parts[2] === 'e') {
-      const formId = parts[3]
-      if (formId) return `https://docs.google.com/forms/d/e/${formId}/viewform${suffix}`
-    }
-
-    // /forms/d/<id>/...
-    if (parts.length >= 3 && parts[0] === 'forms' && parts[1] === 'd' && parts[2] !== 'e') {
-      const formId = parts[2]
-      if (formId) return `https://docs.google.com/forms/d/e/${formId}/viewform${suffix}`
-    }
-  } catch {
-    // Keep original value on URL parse failures.
-  }
-
-  return raw
+  return ''
 }

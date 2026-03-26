@@ -49,6 +49,8 @@ export interface WeeklyTest {
   scheduled_at: string | null; question_count: number; total_questions: number
   questions?: Question[]; created_at: string; my_score?: number; my_rank?: number
   review_questions?: ReviewQuestion[]
+  forms_edit_url?: string
+  forms_view_url?: string
   forms_url?: string
   google_match_mode?: string
   google_student_id_question_id?: string | null

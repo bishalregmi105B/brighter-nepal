@@ -54,8 +54,8 @@ export default function ExamPage() {
     if (!params.id) return
     if (store.exam?.id === params.id) { setExam(store.exam); setLoading(false); return }
     modelSetService.getModelSet(Number(params.id)).then((res) => {
-      const raw = res.data as Parameters<typeof buildExamFromModelSet>[0] & { forms_url?: string }
-      const externalForm = toStudentGoogleFormUrl(raw.forms_url)
+      const raw = res.data as Parameters<typeof buildExamFromModelSet>[0] & { forms_url?: string; forms_view_url?: string }
+      const externalForm = toStudentGoogleFormUrl(raw.forms_view_url, raw.forms_url)
       setFormsUrl(externalForm)
       if (externalForm) {
         modelSetService.getMyResult(Number(params.id))

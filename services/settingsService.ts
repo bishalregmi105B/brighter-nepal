@@ -12,4 +12,6 @@ export const settingsService = {
     api.get<{ data: GoogleFormsSettings }>('/api/settings/google-forms'),
   updateGoogleFormsSettings: (payload: Partial<Pick<GoogleFormsSettings, 'client_id' | 'client_secret' | 'refresh_token'>>) =>
     api.patch<{ data: GoogleFormsSettings }>('/api/settings/google-forms', payload),
+  getGoogleFormsOAuthUrl: () =>
+    api.get<{ data: { auth_url: string; redirect_uri: string } }>('/api/settings/google-forms/oauth/url'),
 }

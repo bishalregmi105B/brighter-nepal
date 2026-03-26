@@ -103,7 +103,7 @@ export default function ModelSetsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayed.map((set, idx) => {
             const isFeatured = idx === 1 // highlight second item as featured
-            const studentFormsUrl = toStudentGoogleFormUrl(set.forms_url)
+            const studentFormsUrl = toStudentGoogleFormUrl(set.forms_view_url, set.forms_url)
             return (
               <div key={set.id} className={cn(
                 'group rounded-2xl p-6 flex flex-col transition-all duration-300 relative overflow-hidden',

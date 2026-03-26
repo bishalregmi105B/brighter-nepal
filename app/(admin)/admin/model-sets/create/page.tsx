@@ -20,7 +20,8 @@ export default function CreateModelSetPage() {
   const [title,     setTitle]     = useState('')
   const [duration,  setDuration]  = useState('120')
   const [level,     setLevel]     = useState('Medium')
-  const [formsUrl,  setFormsUrl]  = useState('')
+  const [formsEditUrl, setFormsEditUrl] = useState('')
+  const [formsViewUrl, setFormsViewUrl] = useState('')
   const [exams,     setExams]     = useState<string[]>([])
   const [availableExams, setAvailableExams] = useState<string[]>([])
   const [customExam, setCustomExam] = useState('')
@@ -98,7 +99,8 @@ export default function CreateModelSetPage() {
         duration_min: Number(duration),
         difficulty: level,
         targets: exams,
-        forms_url: formsUrl.trim(),
+        forms_edit_url: formsEditUrl.trim(),
+        forms_view_url: formsViewUrl.trim(),
         status: (asDraft || !published) ? 'draft' : 'published',
         sections: sections.map(s => ({ subject: s.subject, questions: s.questions })),
         questions: questions.map(q => ({ text: q.text, options: q.options, answer_index: q.answer })),
@@ -203,15 +205,25 @@ export default function CreateModelSetPage() {
               </div>
             </div>
           </div>
-          <div className="md:col-span-2">
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Forms URL (optional)</label>
-            <input
-              value={formsUrl}
-              onChange={(e) => setFormsUrl(e.target.value)}
-              placeholder="https://docs.google.com/forms/d/..."
-              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
-            />
-            <p className="text-[11px] text-slate-400 mt-1.5">If provided, students can open this Google Form directly from the model set. For import/sync, use editor URL: /forms/d/&lt;id&gt;/edit (not /forms/d/e/.../viewform).</p>
+          <div className="md:col-span-2 space-y-4">
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL (admin import/sync, optional)</label>
+              <input
+                value={formsEditUrl}
+                onChange={(e) => setFormsEditUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL (student test link)</label>
+              <input
+                value={formsViewUrl}
+                onChange={(e) => setFormsViewUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+              />
+            </div>
           </div>
         </div>
       </div>

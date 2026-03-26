@@ -23,7 +23,7 @@ export default function WeeklyTestsPage() {
   const liveTest      = tests.find((t) => t.status === 'live')
   const scheduledTests = tests.filter((t) => t.status === 'scheduled')
   const pastTests     = tests.filter((t) => t.status === 'completed')
-  const liveTestFormUrl = toStudentGoogleFormUrl(liveTest?.forms_url)
+  const liveTestFormUrl = toStudentGoogleFormUrl(liveTest?.forms_view_url, liveTest?.forms_url)
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
   if (error)   return <div className="p-10 text-center text-red-500 font-medium">{error}</div>

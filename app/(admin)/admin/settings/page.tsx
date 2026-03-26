@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, Eye, EyeOff, Loader2, Save, ShieldAlert } from 'lucide-react'
 import { settingsService } from '@/services/settingsService'
 
@@ -17,9 +18,11 @@ const EMPTY_FORM: SettingsForm = {
 }
 
 export default function AdminSettingsPage() {
+  const searchParams = useSearchParams()
   const [form, setForm] = useState<SettingsForm>(EMPTY_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [authenticating, setAuthenticating] = useState(false)
   const [showSecret, setShowSecret] = useState(false)
   const [showRefreshToken, setShowRefreshToken] = useState(false)
   const [message, setMessage] = useState('')
@@ -47,6 +50,30 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    const status = (searchParams.get('google_oauth') || '').trim()
+    if (!status) return
+    if (status === 'success') {
+      setMessage('Google authorization succeeded and refresh token was saved.')
+      setError('')
+      settingsService.getGoogleFormsSettings()
+        .then((res) => {
+          const data = res.data ?? EMPTY_FORM
+          setForm({
+            client_id: data.client_id || '',
+            client_secret: data.client_secret || '',
+            refresh_token: data.refresh_token || '',
+          })
+          setConfigured(Boolean(data.configured))
+        })
+        .catch(() => {})
+    } else {
+      const reason = (searchParams.get('reason') || 'Google authorization failed').replace(/_/g, ' ')
+      setError(`Google auth failed: ${reason}`)
+      setMessage('')
+    }
+  }, [searchParams])
+
   async function saveSettings() {
     setSaving(true)
     setError('')
@@ -69,6 +96,27 @@ export default function AdminSettingsPage() {
       setError(err instanceof Error ? err.message : 'Failed to save settings.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function authenticateWithGoogle() {
+    setAuthenticating(true)
+    setError('')
+    setMessage('')
+    try {
+      await settingsService.updateGoogleFormsSettings({
+        client_id: form.client_id,
+        client_secret: form.client_secret,
+      })
+      const res = await settingsService.getGoogleFormsOAuthUrl()
+      const authUrl = res.data?.auth_url || ''
+      if (!authUrl) {
+        throw new Error('Could not generate Google OAuth URL.')
+      }
+      window.location.href = authUrl
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start Google authentication.')
+      setAuthenticating(false)
     }
   }
 
@@ -146,6 +194,7 @@ export default function AdminSettingsPage() {
                   {showRefreshToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <p className="text-[11px] text-slate-500 mt-2">You can paste token manually or generate it using Google authentication below.</p>
             </div>
 
             {error && (
@@ -162,14 +211,24 @@ export default function AdminSettingsPage() {
             )}
 
             <div className="pt-2">
-              <button
-                onClick={saveSettings}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1a1a4e] text-white text-sm font-bold hover:bg-[#141432] disabled:opacity-70"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saving ? 'Saving...' : 'Save Settings'}
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={saveSettings}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1a1a4e] text-white text-sm font-bold hover:bg-[#141432] disabled:opacity-70"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? 'Saving...' : 'Save Settings'}
+                </button>
+                <button
+                  onClick={authenticateWithGoogle}
+                  disabled={authenticating || !form.client_id.trim() || !form.client_secret.trim()}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-[#1a1a4e] hover:bg-slate-50 disabled:opacity-70"
+                >
+                  {authenticating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {authenticating ? 'Redirecting...' : 'Authenticate & Generate Token'}
+                </button>
+              </div>
             </div>
           </div>
         )}

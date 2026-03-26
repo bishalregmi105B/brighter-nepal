@@ -66,7 +66,7 @@ export default function ExamResultsPage() {
       </div>
     )
   }
-  const studentFormsUrl = toStudentGoogleFormUrl(modelSet.forms_url)
+  const studentFormsUrl = toStudentGoogleFormUrl(modelSet.forms_view_url, modelSet.forms_url)
 
   if (!result.has_result) {
     return (

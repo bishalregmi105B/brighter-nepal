@@ -49,7 +49,7 @@ export default function WeeklyTestDetailPage() {
   }
 
   const isCompleted = test.status === 'completed'
-  const studentFormsUrl = toStudentGoogleFormUrl(test.forms_url)
+  const studentFormsUrl = toStudentGoogleFormUrl(test.forms_view_url, test.forms_url)
   const reviewQuestions = result.review_questions ?? []
   const score = result.score ?? 0
   const total = result.total ?? test.total_questions ?? 0

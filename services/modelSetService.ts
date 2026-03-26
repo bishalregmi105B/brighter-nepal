@@ -61,6 +61,8 @@ export interface ModelSet {
   id: number; title: string; difficulty: string; duration_min: number
   total_questions: number; status: string; targets: string[]; created_at: string
   question_count?: number
+  forms_edit_url?: string
+  forms_view_url?: string
   forms_url?: string
   questions?: ModelSetQuestion[]
   google_match_mode?: string

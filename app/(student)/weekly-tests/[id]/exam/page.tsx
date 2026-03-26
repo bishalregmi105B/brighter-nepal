@@ -55,7 +55,7 @@ export default function WeeklyTestExamPage() {
           return
         }
         setTest(t)
-        const externalForm = toStudentGoogleFormUrl(t.forms_url)
+        const externalForm = toStudentGoogleFormUrl(t.forms_view_url, t.forms_url)
         setFormsUrl(externalForm)
         if (!externalForm) {
           setQuestions(t.questions ?? [])

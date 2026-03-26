@@ -19,7 +19,8 @@ export default function CreateWeeklyTestPage() {
   const [duration,  setDuration]  = useState('60')
   const [schedDate, setSchedDate] = useState('')
   const [schedTime, setSchedTime] = useState('')
-  const [formsUrl,  setFormsUrl]  = useState('')
+  const [formsEditUrl, setFormsEditUrl] = useState('')
+  const [formsViewUrl, setFormsViewUrl] = useState('')
   const [saving,    setSaving]    = useState(false)
   const [questions, setQuestions] = useState<Question[]>([
     { id: 'q1', text: '', options: ['', '', '', ''], answer: 0 },
@@ -119,15 +120,25 @@ export default function CreateWeeklyTestPage() {
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
             />
           </div>
-          <div className="md:col-span-2">
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Forms URL (optional)</label>
-            <input
-              value={formsUrl}
-              onChange={(e) => setFormsUrl(e.target.value)}
-              placeholder="https://docs.google.com/forms/d/..."
-              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
-            />
-            <p className="text-[11px] text-slate-400 mt-1.5">If provided, &#34;Start Test Now&#34; will open this form in a new tab for students. For import/sync, use editor URL: /forms/d/&lt;id&gt;/edit (not /forms/d/e/.../viewform).</p>
+          <div className="md:col-span-2 space-y-4">
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL (admin import/sync, optional)</label>
+              <input
+                value={formsEditUrl}
+                onChange={(e) => setFormsEditUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL (student test link)</label>
+              <input
+                value={formsViewUrl}
+                onChange={(e) => setFormsViewUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Start Time</label>
@@ -199,7 +210,8 @@ export default function CreateWeeklyTestPage() {
           try {
             await weeklyTestService.createTest({ title, subject, duration_min: Number(duration), status: 'draft',
               scheduled_at: schedDate && schedTime ? `${schedDate}T${schedTime}:00` : null,
-              forms_url: formsUrl || undefined,
+              forms_edit_url: formsEditUrl || undefined,
+              forms_view_url: formsViewUrl || undefined,
               questions: questions.map(q => ({ text: q.text, options: q.options, answer_index: q.answer })) as unknown as import('@/services/weeklyTestService').Question[] })
             router.push('/admin/weekly-tests')
           } catch { setSaving(false) }
@@ -211,7 +223,8 @@ export default function CreateWeeklyTestPage() {
           try {
             await weeklyTestService.createTest({ title, subject, duration_min: Number(duration), status: 'upcoming',
               scheduled_at: schedDate && schedTime ? `${schedDate}T${schedTime}:00` : null,
-              forms_url: formsUrl || undefined,
+              forms_edit_url: formsEditUrl || undefined,
+              forms_view_url: formsViewUrl || undefined,
               questions: questions.map(q => ({ text: q.text, options: q.options, answer_index: q.answer })) as unknown as import('@/services/weeklyTestService').Question[] })
             router.push('/admin/weekly-tests')
           } catch { setSaving(false) }

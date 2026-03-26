@@ -25,8 +25,9 @@ export default function EditWeeklyTestPage() {
   const [subject,   setSubject]   = useState('')
   const [duration,  setDuration]  = useState('60')
   const [status,    setStatus]    = useState('scheduled')
-  const [formsUrl,  setFormsUrl]  = useState('')
-  const [persistedFormsUrl, setPersistedFormsUrl] = useState('')
+  const [formsEditUrl, setFormsEditUrl] = useState('')
+  const [formsViewUrl, setFormsViewUrl] = useState('')
+  const [persistedFormsEditUrl, setPersistedFormsEditUrl] = useState('')
   const [schedDate, setSchedDate] = useState('')
   const [schedTime, setSchedTime] = useState('')
   const [questions, setQuestions] = useState<Question[]>([])
@@ -47,8 +48,9 @@ export default function EditWeeklyTestPage() {
     setSubject(t.subject)
     setDuration(String(t.duration_min))
     setStatus(t.status)
-    setFormsUrl(t.forms_url || '')
-    setPersistedFormsUrl(t.forms_url || '')
+    setFormsEditUrl(t.forms_edit_url || t.forms_url || '')
+    setFormsViewUrl(t.forms_view_url || '')
+    setPersistedFormsEditUrl(t.forms_edit_url || t.forms_url || '')
     setGoogleStudentIdQuestionId(t.google_student_id_question_id || '')
     setGoogleQuestions(t.google_questions ?? [])
     setGoogleSummary(t.google_last_sync_summary ?? {})
@@ -115,7 +117,7 @@ export default function EditWeeklyTestPage() {
     setQuestions((prev) => prev.map((q) => q.id === qid ? { ...q, answer: idx } : q))
 
   const importedCount = googleQuestions.filter((question) => question.is_imported).length
-  const hasUnsavedFormsUrl = formsUrl.trim() !== persistedFormsUrl.trim()
+  const hasUnsavedFormsUrl = formsEditUrl.trim() !== persistedFormsEditUrl.trim()
 
   const save = async () => {
     setSaving(true)
@@ -127,7 +129,8 @@ export default function EditWeeklyTestPage() {
         subject,
         duration_min: Number(duration),
         status,
-        forms_url: formsUrl.trim(),
+        forms_edit_url: formsEditUrl.trim(),
+        forms_view_url: formsViewUrl.trim(),
         google_match_mode: 'email_then_student_id',
         google_student_id_question_id: googleStudentIdQuestionId || null,
         scheduled_at: schedDate && schedTime ? `${schedDate}T${schedTime}:00` : null,
@@ -240,13 +243,19 @@ export default function EditWeeklyTestPage() {
             </div>
           </div>
 
-          {/* Google Forms URL */}
-          <div className="md:col-span-2">
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Forms URL (for live test)</label>
-            <input value={formsUrl} onChange={(e) => setFormsUrl(e.target.value)}
-              placeholder="https://docs.google.com/forms/d/..."
-              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium" />
-            <p className="text-[11px] text-slate-400 mt-1.5">When the test is live, students will be redirected to this Google Form instead of the internal exam. For import/sync, use editor URL: /forms/d/&lt;id&gt;/edit (not /forms/d/e/.../viewform).</p>
+          <div className="md:col-span-2 space-y-4">
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL (import/sync, optional)</label>
+              <input value={formsEditUrl} onChange={(e) => setFormsEditUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL (student test)</label>
+              <input value={formsViewUrl} onChange={(e) => setFormsViewUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium" />
+            </div>
           </div>
 
           <div>
@@ -317,7 +326,7 @@ export default function EditWeeklyTestPage() {
         <div className="flex flex-wrap gap-3">
           <button
             onClick={handleImportQuestions}
-            disabled={googleBusy !== '' || !persistedFormsUrl.trim() || hasUnsavedFormsUrl}
+            disabled={googleBusy !== '' || !persistedFormsEditUrl.trim() || hasUnsavedFormsUrl}
             className="px-5 py-3 bg-[#1a1a4e] text-white rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {googleBusy === 'import' ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
@@ -325,7 +334,7 @@ export default function EditWeeklyTestPage() {
           </button>
           <button
             onClick={handleSyncResults}
-            disabled={googleBusy !== '' || !persistedFormsUrl.trim() || hasUnsavedFormsUrl || importedCount === 0}
+            disabled={googleBusy !== '' || !persistedFormsEditUrl.trim() || hasUnsavedFormsUrl || importedCount === 0}
             className="px-5 py-3 bg-on-primary-container text-white rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {googleBusy === 'sync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}

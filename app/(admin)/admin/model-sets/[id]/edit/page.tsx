@@ -30,8 +30,9 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
   const [title,        setTitle]        = useState('')
   const [duration,     setDuration]     = useState('120')
   const [level,        setLevel]        = useState('Medium')
-  const [formsUrl,     setFormsUrl]     = useState('')
-  const [persistedFormsUrl, setPersistedFormsUrl] = useState('')
+  const [formsEditUrl, setFormsEditUrl] = useState('')
+  const [formsViewUrl, setFormsViewUrl] = useState('')
+  const [persistedFormsEditUrl, setPersistedFormsEditUrl] = useState('')
   const [exams,        setExams]        = useState<string[]>([])
   const [availableExams, setAvailableExams] = useState<string[]>([])
   const [customExam,   setCustomExam]   = useState('')
@@ -50,8 +51,9 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
     setTitle(ms.title ?? '')
     setDuration(String(ms.duration_min ?? 120))
     setLevel(ms.difficulty ?? 'Medium')
-    setFormsUrl(ms.forms_url ?? '')
-    setPersistedFormsUrl(ms.forms_url ?? '')
+    setFormsEditUrl(ms.forms_edit_url ?? ms.forms_url ?? '')
+    setFormsViewUrl(ms.forms_view_url ?? '')
+    setPersistedFormsEditUrl(ms.forms_edit_url ?? ms.forms_url ?? '')
     setPublished(ms.status === 'published')
     const targets = Array.isArray(ms.targets) ? ms.targets : []
     setExams(targets)
@@ -168,7 +170,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
 
   const totalQuestions = questions.length
   const importedCount = googleQuestions.filter((q) => q.is_imported).length
-  const hasUnsavedFormsUrl = formsUrl.trim() !== persistedFormsUrl.trim()
+  const hasUnsavedFormsUrl = formsEditUrl.trim() !== persistedFormsEditUrl.trim()
 
   const handleSave = async () => {
     setSaving(true)
@@ -180,7 +182,8 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
         difficulty: level,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         targets: exams as any,
-        forms_url: formsUrl.trim(),
+        forms_edit_url: formsEditUrl.trim(),
+        forms_view_url: formsViewUrl.trim(),
         google_match_mode: 'email_then_student_id',
         google_student_id_question_id: googleStudentIdQuestionId || null,
         status: published ? 'published' : 'draft',
@@ -314,15 +317,25 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
               </div>
             </div>
           </div>
-          <div className="md:col-span-2">
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Forms URL (optional)</label>
-            <input
-              value={formsUrl}
-              onChange={e => setFormsUrl(e.target.value)}
-              placeholder="https://docs.google.com/forms/d/..."
-              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
-            />
-            <p className="text-[11px] text-slate-400 mt-1.5">If provided, students can open this Google Form directly from the model set. For import/sync, use editor URL: /forms/d/&lt;id&gt;/edit (not /forms/d/e/.../viewform).</p>
+          <div className="md:col-span-2 space-y-4">
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL (import/sync, optional)</label>
+              <input
+                value={formsEditUrl}
+                onChange={e => setFormsEditUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL (student test)</label>
+              <input
+                value={formsViewUrl}
+                onChange={e => setFormsViewUrl(e.target.value)}
+                placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
+                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -382,7 +395,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
         <div className="flex flex-wrap gap-3">
           <button
             onClick={handleImportQuestions}
-            disabled={googleBusy !== '' || !persistedFormsUrl.trim() || hasUnsavedFormsUrl}
+            disabled={googleBusy !== '' || !persistedFormsEditUrl.trim() || hasUnsavedFormsUrl}
             className="px-5 py-3 bg-[#1a1a4e] text-white rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {googleBusy === 'import' ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
@@ -390,7 +403,7 @@ export default function EditModelSetPage({ params }: { params: { id: string } })
           </button>
           <button
             onClick={handleSyncResults}
-            disabled={googleBusy !== '' || !persistedFormsUrl.trim() || hasUnsavedFormsUrl || importedCount === 0}
+            disabled={googleBusy !== '' || !persistedFormsEditUrl.trim() || hasUnsavedFormsUrl || importedCount === 0}
             className="px-5 py-3 bg-on-primary-container text-white rounded-xl font-bold text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {googleBusy === 'sync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
