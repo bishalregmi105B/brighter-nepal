@@ -22,8 +22,9 @@ export default function AdminGroupChatPage() {
   const fileRef       = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const groupId = group?.id ?? null
-  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected } = useGroupChat(groupId)
+  const routeGroupId = Number(params.id)
+  const socketGroupId = Number.isFinite(routeGroupId) && routeGroupId > 0 ? routeGroupId : null
+  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected } = useGroupChat(socketGroupId)
 
   useEffect(() => {
     const gid = Number(params.id)
@@ -46,13 +47,16 @@ export default function AdminGroupChatPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() && !preview) return
+    if (!socketGroupId) return
     setSending(true)
-    sendMessage(input, preview ?? undefined)
-    setInput('')
-    setPreview(null)
-    setTyping(false)
+    try {
+      sendMessage(input, preview ?? undefined)
+      setInput('')
+      setPreview(null)
+      setTyping(false)
+    } catch {}
     setSending(false)
   }
 
@@ -130,13 +134,21 @@ export default function AdminGroupChatPage() {
                     </span>
                   </div>
                   <div className={cn("p-4 rounded-2xl shadow-sm max-w-xl",
-                    isMe ? "bg-[#c0622f] text-white rounded-tr-none" : "bg-white border border-slate-100 text-[#1a1a4e] rounded-tl-none")}>
+                    isMe ? "bg-[#c0622f] text-white rounded-tr-none" : "bg-white border border-slate-100 text-[#1a1a4e] rounded-tl-none",
+                    msg.pending && "opacity-60")}>
                     {msg.text && <p className="text-sm leading-relaxed">{msg.text}</p>}
                     {msg.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={msg.image_url} alt="img" className="max-w-xs rounded-xl mt-2" />
                     )}
                   </div>
+                  {!isMe && (
+                    <div className="flex gap-2 mt-1 flex-wrap">
+                      {quickReacts.map((emoji) => (
+                        <button key={emoji} className="hover:scale-125 transition-transform text-base grayscale hover:grayscale-0">{emoji}</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )
