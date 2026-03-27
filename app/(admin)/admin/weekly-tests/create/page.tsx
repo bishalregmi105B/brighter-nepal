@@ -121,6 +121,15 @@ export default function CreateWeeklyTestPage() {
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
             />
           </div>
+          <div className="md:col-span-2">
+            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL</label>
+            <input
+              value={formsViewUrl}
+              onChange={(e) => setFormsViewUrl(e.target.value)}
+              placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
+              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
+            />
+          </div>
           <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70">
             <details className="group">
               <summary className="cursor-pointer list-none px-4 py-3 font-bold text-sm text-[#1a1a4e] flex items-center justify-between">
@@ -159,15 +168,6 @@ export default function CreateWeeklyTestPage() {
                       value={formsEditUrl}
                       onChange={(e) => setFormsEditUrl(e.target.value)}
                       placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
-                      className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL</label>
-                    <input
-                      value={formsViewUrl}
-                      onChange={(e) => setFormsViewUrl(e.target.value)}
-                      placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
                       className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
                     />
                   </div>
