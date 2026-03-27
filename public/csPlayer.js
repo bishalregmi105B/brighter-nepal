@@ -299,6 +299,38 @@ var csPlayer = {
             state.liveEdgeOffsetSec = 0;
             state.hasAppliedInitialLiveEdge = false;
             state.lastLiveEdgeSyncAt = 0;
+            state.lastRawLiveCurrentSec = 0;
+            state.displayLiveCurrentSec = 0;
+            state.lastLiveDisplayTickAt = 0;
+        }
+
+        function getDisplayedLiveCurrent(rawCur) {
+            var state = csPlayer.csPlayers[videoTag];
+            var now = Date.now();
+            rawCur = isFinite(rawCur) && rawCur >= 0 ? rawCur : 0;
+
+            if (
+                !isFinite(state.lastRawLiveCurrentSec) ||
+                !isFinite(state.displayLiveCurrentSec) ||
+                !state.lastLiveDisplayTickAt
+            ) {
+                state.lastRawLiveCurrentSec = rawCur;
+                state.displayLiveCurrentSec = rawCur;
+                state.lastLiveDisplayTickAt = now;
+                return rawCur;
+            }
+
+            if (Math.abs(rawCur - state.lastRawLiveCurrentSec) > 0.2 || state.playerState !== 'playing') {
+                state.lastRawLiveCurrentSec = rawCur;
+                state.displayLiveCurrentSec = rawCur;
+                state.lastLiveDisplayTickAt = now;
+                return rawCur;
+            }
+
+            var elapsed = Math.max(0, (now - state.lastLiveDisplayTickAt) / 1000);
+            state.displayLiveCurrentSec = Math.max(rawCur, state.displayLiveCurrentSec + elapsed);
+            state.lastLiveDisplayTickAt = now;
+            return state.displayLiveCurrentSec;
         }
 
         function shouldPinToLiveEdgeUI(cur, dur) {
@@ -331,8 +363,8 @@ var csPlayer = {
         // ── time / slider updates ────────────────────────────
         function updateTextTime() {
             var p = csPlayer.csPlayers[videoTag].videoTag;
-            var cur = p.getCurrentTime();
-            var dur = p.getDuration();
+            var cur = Number(p.getCurrentTime());
+            var dur = Number(p.getDuration());
             cur = isFinite(cur) && cur >= 0 ? cur : 0;
             dur = isFinite(dur) && dur >= 0 ? dur : 0;
 
@@ -342,16 +374,15 @@ var csPlayer = {
             var badge = root.querySelector('.csPlayer-live-badge');
 
             if (isLive) {
-                // For live DVR streams, YouTube reports elapsed live time via getDuration().
-                var adjustedCur = getAdjustedLiveCurrent(cur, dur);
-                var pinnedToEdge = shouldPinToLiveEdgeUI(cur, dur);
+                var displayLiveCur = getDisplayedLiveCurrent(cur);
+                var adjustedCur = getAdjustedLiveCurrent(displayLiveCur, dur);
+                var pinnedToEdge = shouldPinToLiveEdgeUI(displayLiveCur, dur);
                 var displayCur = pinnedToEdge ? dur : adjustedCur;
                 curEl.style.display = 'block';
-                durEl.style.display = 'block';
+                durEl.style.display = 'none';
                 curEl.textContent = formatTime(displayCur);
-                durEl.textContent = formatTime(dur);
                 if (badge) {
-                    if (pinnedToEdge || (dur > 0 && (dur - cur) <= 2)) badge.classList.add('csPlayer-at-edge');
+                    if (pinnedToEdge || (dur > 0 && (dur - displayLiveCur) <= 2)) badge.classList.add('csPlayer-at-edge');
                     else badge.classList.remove('csPlayer-at-edge');
                 }
             } else {
@@ -369,8 +400,10 @@ var csPlayer = {
             if (csPlayer.csPlayers[videoTag].dragging || csPlayer.csPlayers[videoTag]._seekSettling) return;
             slider.disabled = false;
             slider.style.pointerEvents = 'auto';
-            var cur = p.getCurrentTime();
-            var dur = p.getDuration();
+            var cur = Number(p.getCurrentTime());
+            var dur = Number(p.getDuration());
+            cur = isFinite(cur) && cur >= 0 ? cur : 0;
+            dur = isFinite(dur) && dur >= 0 ? dur : 0;
             var isLive = csPlayer.csPlayers[videoTag].isLive;
             var adjustedCur = getAdjustedLiveCurrent(cur, dur);
             var pct = 0;
@@ -640,6 +673,7 @@ var csPlayer = {
             if (event.data === YT.PlayerState.PLAYING) {
                 st.isPlaying = true;
                 st.playerState = 'playing';
+                st.lastLiveDisplayTickAt = Date.now();
 
                 // Detect live on first PLAYING event (getVideoData is populated now)
                 if (!st.liveDetected) {
@@ -683,15 +717,18 @@ var csPlayer = {
                 clearTimeout(controlsTO);
                 st.isPlaying = false;
                 st.playerState = 'paused';
+                st.lastLiveDisplayTickAt = Date.now();
                 ppBtn.className = 'ti csPlayer-play-pause-btn ti-player-play-filled';
                 if (botPlay) botPlay.className = 'ti bottom-play-btn ti-player-play-filled';
                 controlsBox.classList.add('csPlayer-controls-open');
 
             } else if (event.data === YT.PlayerState.BUFFERING) {
                 st.playerState = 'buffering';
+                st.lastLiveDisplayTickAt = Date.now();
 
             } else if (event.data === YT.PlayerState.ENDED) {
                 st.playerState = 'ended';
+                st.lastLiveDisplayTickAt = Date.now();
                 var loop = param('loop');
                 if (loop === true || loop === 'true') {
                     st.videoTag.seekTo(0);
@@ -842,6 +879,9 @@ var csPlayer = {
                 hasAppliedInitialLiveEdge: false,
                 lastLiveEdgeSyncAt: 0,
                 liveEdgeOffsetSec: 0,
+                lastRawLiveCurrentSec: 0,
+                displayLiveCurrentSec: 0,
+                lastLiveDisplayTickAt: 0,
             };
 
             csPlayer.preSetup(videoTag, 'csPlayer-' + videoTag).then(() => {

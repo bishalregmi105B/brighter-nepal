@@ -29,7 +29,6 @@ export default function CreateModelSetPage() {
   const [questions, setQuestions] = useState<Question[]>([
     { id: 'q1', text: '', options: ['', '', '', ''], answer: 0 },
   ])
-  const [published, setPublished] = useState(false)
   const [saving,    setSaving]    = useState(false)
   useEffect(() => {
     api.get<{ data: string[] }>('/api/model-sets/targets')
@@ -101,7 +100,7 @@ export default function CreateModelSetPage() {
         targets: exams,
         forms_edit_url: formsEditUrl.trim(),
         forms_view_url: formsViewUrl.trim(),
-        status: (asDraft || !published) ? 'draft' : 'published',
+        status: asDraft ? 'draft' : 'published',
         sections: sections.map(s => ({ subject: s.subject, questions: s.questions })),
         questions: questions.map(q => ({ text: q.text, options: q.options, answer_index: q.answer })),
       })
@@ -119,17 +118,7 @@ export default function CreateModelSetPage() {
         </Link>
         <div>
           <h2 className="font-headline font-black text-3xl text-[#1a1a4e]">Create Model Set</h2>
-          <p className="text-slate-500 text-sm font-medium">Build a new mock entrance exam set.</p>
-        </div>
-        {/* Publish toggle */}
-        <div className="ml-auto flex items-center gap-3">
-          <span className="text-sm font-bold text-on-surface-variant">{published ? 'Published' : 'Draft'}</span>
-          <button
-            onClick={() => setPublished(!published)}
-            className={cn('w-12 h-6 rounded-full relative shadow-inner transition-colors', published ? 'bg-teal-500' : 'bg-surface-container-highest')}
-          >
-            <div className={cn('w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-all', published ? 'right-0.5' : 'left-0.5')} />
-          </button>
+          <p className="text-slate-500 text-sm font-medium">Build a new mock entrance exam set with only the essential fields up front.</p>
         </div>
       </div>
 
@@ -156,74 +145,84 @@ export default function CreateModelSetPage() {
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
             />
           </div>
-          <div>
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><BarChart2 className="w-3 h-3" /> Difficulty</label>
-            <div className="flex gap-2">
-              {LEVELS.map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLevel(l)}
-                  className={cn(
-                    'flex-1 py-3 rounded-xl text-sm font-bold transition-all',
-                    level === l ? 'bg-[#1a1a4e] text-white' : 'bg-surface-container text-slate-600 hover:bg-surface-container-high'
-                  )}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Target Exams</label>
-            <div className="flex gap-2 flex-wrap items-center">
-              {availableExams.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => toggleExam(e)}
-                  className={cn(
-                    'px-4 py-2 rounded-xl text-sm font-bold transition-all border',
-                    exams.includes(e) ? 'border-on-primary-container bg-on-primary-container/10 text-on-primary-container' : 'border-surface-container text-slate-500 hover:border-outline'
-                  )}
-                >
-                  {e}
-                </button>
-              ))}
-              {/* Custom exam input */}
-              <div className="flex items-center gap-1">
-                <input
-                  value={customExam}
-                  onChange={e => setCustomExam(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addCustomExam()}
-                  placeholder="+ New exam"
-                  className="px-3 py-2 text-sm rounded-xl border border-dashed border-outline-variant text-slate-500 w-24 focus:outline-none focus:border-on-primary-container"
-                />
-                {customExam.trim() && (
-                  <button onClick={addCustomExam} className="px-2 py-2 text-xs font-bold bg-on-primary-container/10 text-on-primary-container rounded-xl hover:bg-on-primary-container/20">
-                    Add
-                  </button>
-                )}
+          <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70">
+            <details className="group">
+              <summary className="cursor-pointer list-none px-4 py-3 font-bold text-sm text-[#1a1a4e] flex items-center justify-between">
+                Optional Settings
+                <span className="text-xs text-slate-400 group-open:hidden">Show more</span>
+                <span className="text-xs text-slate-400 hidden group-open:inline">Hide</span>
+              </summary>
+              <div className="px-4 pb-4 space-y-5 border-t border-slate-200">
+                <div className="pt-4">
+                  <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><BarChart2 className="w-3 h-3" /> Difficulty</label>
+                  <div className="flex gap-2">
+                    {LEVELS.map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => setLevel(l)}
+                        className={cn(
+                          'flex-1 py-3 rounded-xl text-sm font-bold transition-all',
+                          level === l ? 'bg-[#1a1a4e] text-white' : 'bg-white text-slate-600 hover:bg-surface-container-high'
+                        )}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Target Exams</label>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    {availableExams.map((e) => (
+                      <button
+                        key={e}
+                        onClick={() => toggleExam(e)}
+                        className={cn(
+                          'px-4 py-2 rounded-xl text-sm font-bold transition-all border',
+                          exams.includes(e) ? 'border-on-primary-container bg-on-primary-container/10 text-on-primary-container' : 'border-surface-container bg-white text-slate-500 hover:border-outline'
+                        )}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                    <div className="flex items-center gap-1">
+                      <input
+                        value={customExam}
+                        onChange={e => setCustomExam(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addCustomExam()}
+                        placeholder="+ New exam"
+                        className="px-3 py-2 text-sm rounded-xl border border-dashed border-outline-variant text-slate-500 bg-white w-24 focus:outline-none focus:border-on-primary-container"
+                      />
+                      {customExam.trim() && (
+                        <button onClick={addCustomExam} className="px-2 py-2 text-xs font-bold bg-on-primary-container/10 text-on-primary-container rounded-xl hover:bg-on-primary-container/20">
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL</label>
+                    <input
+                      value={formsEditUrl}
+                      onChange={(e) => setFormsEditUrl(e.target.value)}
+                      placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
+                      className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL</label>
+                    <input
+                      value={formsViewUrl}
+                      onChange={(e) => setFormsViewUrl(e.target.value)}
+                      placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
+                      className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="md:col-span-2 space-y-4">
-            <div>
-              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL (admin import/sync, optional)</label>
-              <input
-                value={formsEditUrl}
-                onChange={(e) => setFormsEditUrl(e.target.value)}
-                placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
-                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL (student test link)</label>
-              <input
-                value={formsViewUrl}
-                onChange={(e) => setFormsViewUrl(e.target.value)}
-                placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
-                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
-              />
-            </div>
+            </details>
           </div>
         </div>
       </div>

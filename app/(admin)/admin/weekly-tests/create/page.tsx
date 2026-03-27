@@ -11,14 +11,24 @@ import { DEFAULT_SUBJECTS, getDefaultSubject, mergeSubjectOptions } from '@/lib/
 
 interface Question { id: string; text: string; options: string[]; answer: number }
 
+function getCurrentLocalSchedule() {
+  const now = new Date()
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+  return {
+    date: local.toISOString().slice(0, 10),
+    time: local.toISOString().slice(11, 16),
+  }
+}
+
 export default function CreateWeeklyTestPage() {
   const router = useRouter()
+  const initialSchedule = getCurrentLocalSchedule()
   const [dbSubjects, setDbSubjects] = useState<string[]>([])
   const [title,     setTitle]     = useState('')
   const [subject,   setSubject]   = useState('')
   const [duration,  setDuration]  = useState('60')
-  const [schedDate, setSchedDate] = useState('')
-  const [schedTime, setSchedTime] = useState('')
+  const [schedDate, setSchedDate] = useState(initialSchedule.date)
+  const [schedTime, setSchedTime] = useState(initialSchedule.time)
   const [formsEditUrl, setFormsEditUrl] = useState('')
   const [formsViewUrl, setFormsViewUrl] = useState('')
   const [saving,    setSaving]    = useState(false)
@@ -72,7 +82,7 @@ export default function CreateWeeklyTestPage() {
         </Link>
         <div>
           <h2 className="font-headline font-black text-3xl text-[#1a1a4e]">Create Weekly Test</h2>
-          <p className="text-slate-500 text-sm font-medium">Schedule a new test session for your students.</p>
+          <p className="text-slate-500 text-sm font-medium">Create a test quickly. Date and time start from the current local time.</p>
         </div>
       </div>
 
@@ -111,43 +121,59 @@ export default function CreateWeeklyTestPage() {
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
             />
           </div>
-          <div>
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><CalendarDays className="w-3 h-3" /> Schedule Date</label>
-            <input
-              type="date"
-              value={schedDate}
-              onChange={(e) => setSchedDate(e.target.value)}
-              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
-            />
-          </div>
-          <div className="md:col-span-2 space-y-4">
-            <div>
-              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL (admin import/sync, optional)</label>
-              <input
-                value={formsEditUrl}
-                onChange={(e) => setFormsEditUrl(e.target.value)}
-                placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
-                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL (student test link)</label>
-              <input
-                value={formsViewUrl}
-                onChange={(e) => setFormsViewUrl(e.target.value)}
-                placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
-                className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Start Time</label>
-            <input
-              type="time"
-              value={schedTime}
-              onChange={(e) => setSchedTime(e.target.value)}
-              className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
-            />
+          <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70">
+            <details className="group">
+              <summary className="cursor-pointer list-none px-4 py-3 font-bold text-sm text-[#1a1a4e] flex items-center justify-between">
+                Optional Schedule & Google Form Settings
+                <span className="text-xs text-slate-400 group-open:hidden">Show more</span>
+                <span className="text-xs text-slate-400 hidden group-open:inline">Hide</span>
+              </summary>
+              <div className="px-4 pb-4 space-y-5 border-t border-slate-200">
+                <p className="pt-4 text-xs text-slate-500 font-medium">
+                  Start date and time are prefilled with the current local time so you only need to change them if this test is for later.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><CalendarDays className="w-3 h-3" /> Schedule Date</label>
+                    <input
+                      type="date"
+                      value={schedDate}
+                      onChange={(e) => setSchedDate(e.target.value)}
+                      className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2">Start Time</label>
+                    <input
+                      type="time"
+                      value={schedTime}
+                      onChange={(e) => setSchedTime(e.target.value)}
+                      className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form Edit URL</label>
+                    <input
+                      value={formsEditUrl}
+                      onChange={(e) => setFormsEditUrl(e.target.value)}
+                      placeholder="https://docs.google.com/forms/d/<FORM_ID>/edit"
+                      className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-outline uppercase tracking-wider block mb-2 flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Google Form View URL</label>
+                    <input
+                      value={formsViewUrl}
+                      onChange={(e) => setFormsViewUrl(e.target.value)}
+                      placeholder="https://docs.google.com/forms/d/e/<FORM_ID>/viewform"
+                      className="w-full px-4 py-3 bg-white rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
       </div>
