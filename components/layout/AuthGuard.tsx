@@ -16,11 +16,13 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const token = typeof window !== 'undefined' ? localStorage.getItem('bn_token') : null
+  const hasWrongRole = Boolean(requiredRole && user && user.role !== requiredRole)
+  const needsOnboarding = Boolean(user?.role === 'student' && user.onboarding_completed === false && pathname !== '/onboarding')
 
   useEffect(() => {
     if (loading) return
     // No token / no user → redirect to login
-    const token = typeof window !== 'undefined' ? localStorage.getItem('bn_token') : null
     if (!token || !user) {
       router.replace('/login')
       return
@@ -34,10 +36,10 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     if (user.role === 'student' && user.onboarding_completed === false && pathname !== '/onboarding') {
       router.replace('/onboarding')
     }
-  }, [loading, user, requiredRole, router, pathname])
+  }, [loading, pathname, requiredRole, router, token, user])
 
   // While loading show a branded spinner
-  if (loading || !user) {
+  if (loading || !token || !user || hasWrongRole || needsOnboarding) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
         <div className="flex flex-col items-center gap-4">

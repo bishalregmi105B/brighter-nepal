@@ -1,5 +1,6 @@
 import { api } from './api'
 import { forceLogout } from './api'
+import { clearSessionCookies, syncSessionCookies } from '@/lib/utils/sessionCookies'
 
 export interface AuthUser {
   id: number; name: string; email: string; plan: string; status: string; role: string
@@ -32,6 +33,7 @@ export const authService = {
     if (res.data?.token) {
       localStorage.setItem('bn_token', res.data.token)
       localStorage.setItem('bn_user', JSON.stringify(res.data.user))
+      syncSessionCookies(res.data.user)
     }
     return res.data
   },
@@ -41,19 +43,26 @@ export const authService = {
     if (res.data?.token) {
       localStorage.setItem('bn_token', res.data.token)
       localStorage.setItem('bn_user', JSON.stringify(res.data.user))
+      syncSessionCookies(res.data.user)
     }
     return res.data
   },
 
   async getMe(): Promise<AuthUser> {
     const res = await api.get<{ data: AuthUser }>('/api/auth/me')
-    if (res.data) localStorage.setItem('bn_user', JSON.stringify(res.data))
+    if (res.data) {
+      localStorage.setItem('bn_user', JSON.stringify(res.data))
+      syncSessionCookies(res.data)
+    }
     return res.data
   },
 
   async completeOnboarding(payload: CompleteOnboardingPayload): Promise<AuthUser> {
     const res = await api.post<{ data: AuthUser }>('/api/auth/complete-onboarding', payload)
-    if (res.data) localStorage.setItem('bn_user', JSON.stringify(res.data))
+    if (res.data) {
+      localStorage.setItem('bn_user', JSON.stringify(res.data))
+      syncSessionCookies(res.data)
+    }
     return res.data
   },
 
@@ -61,5 +70,6 @@ export const authService = {
     try { await api.post('/api/auth/logout', {}) } catch {}
     localStorage.removeItem('bn_token')
     localStorage.removeItem('bn_user')
+    clearSessionCookies()
   },
 }

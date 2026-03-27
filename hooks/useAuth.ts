@@ -19,13 +19,20 @@ function readCachedUser(): AuthUser | null {
   } catch { return null }
 }
 
+function hasToken(): boolean {
+  if (typeof window === 'undefined') return false
+  return Boolean(localStorage.getItem(TOKEN_KEY))
+}
+
 export function useAuth() {
   const [user,    setUser]    = useState<AuthUser | null>(readCachedUser)
-  const [loading, setLoading] = useState(!readCachedUser())
+  const [loading, setLoading] = useState(hasToken())
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options?: { silent?: boolean }) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null
     if (!token) { setUser(null); setLoading(false); return }
+    const silent = Boolean(options?.silent && readCachedUser())
+    if (!silent) setLoading(true)
     try {
       const me = await authService.getMe()
       localStorage.setItem(USER_KEY, JSON.stringify(me))
@@ -35,11 +42,32 @@ export function useAuth() {
       localStorage.removeItem(USER_KEY)
       setUser(null)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
-  useEffect(() => { refresh() }, [refresh])
+  useEffect(() => {
+    refresh()
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key && event.key !== TOKEN_KEY && event.key !== USER_KEY) return
+      refresh({ silent: true })
+    }
+    const handleFocus = () => { refresh({ silent: true }) }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refresh({ silent: true })
+    }
+
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [refresh])
 
   const logout = useCallback(async () => {
     try { await authService.logout() } catch {}

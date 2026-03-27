@@ -4,6 +4,7 @@
  * - On 401 (token expired / session invalidated): clears token and redirects to /login
  * - All service modules import this instead of fetch directly.
  */
+import { clearSessionCookies } from '@/lib/utils/sessionCookies'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
@@ -26,6 +27,7 @@ export function forceLogout(reason = 'session_expired') {
   if (typeof window === 'undefined') return
   localStorage.removeItem('bn_token')
   localStorage.removeItem('bn_user')
+  clearSessionCookies()
   // Don't redirect if already on an auth page — prevents infinite loops
   const path = window.location.pathname
   if (path.startsWith('/login') || path.startsWith('/signup')) return

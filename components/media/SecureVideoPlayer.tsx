@@ -4,7 +4,7 @@
  *  - Hides YouTube watermarks cleanly
  *  - Disables right click
  */
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { ShieldCheck, PlayCircle } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
@@ -43,7 +43,7 @@ function extractYouTubeId(url: string): string | null {
   return null;
 }
 
-export function SecureVideoPlayer({
+export const SecureVideoPlayer = memo(function SecureVideoPlayer({
   videoUrl, title, className, preferLiveEdge = false
 }: SecureVideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -59,39 +59,62 @@ export function SecureVideoPlayer({
   useEffect(() => {
     let isMounted = true;
 
-    // Load CSS
-      const cssLink = document.createElement('link')
-      cssLink.rel = 'stylesheet'
-      cssLink.href = '/csPlayer.css?v=' + Date.now()
-      document.head.appendChild(cssLink)
-
     const onReady = () => {
       if (isMounted && window.YT && window.YT.Player && window.csPlayer) {
         setAreScriptsReady(true);
       }
     };
 
-    if (window.YT && window.YT.Player) {
-      if (window.csPlayer) { onReady(); }
-      else {
-        const csScript = document.createElement('script')
-        csScript.src = '/csPlayer.js?v=' + Date.now()
-        csScript.async = true
-        csScript.onload = onReady
-        csScript.onerror = () => { if (isMounted) setPlayerError('Failed to load player script'); }
-        document.head.appendChild(csScript)
+    const onScriptError = () => {
+      if (isMounted) setPlayerError('Failed to load player script')
+    }
+
+    if (!document.querySelector('link[data-csplayer-style="true"]')) {
+      const cssLink = document.createElement('link')
+      cssLink.rel = 'stylesheet'
+      cssLink.href = '/csPlayer.css'
+      cssLink.dataset.csplayerStyle = 'true'
+      document.head.appendChild(cssLink)
+    }
+
+    const ensureCsPlayerScript = () => {
+      if (window.csPlayer) {
+        onReady()
+        return () => {}
       }
-    } else {
-      window.onYouTubeIframeAPIReady = () => {
-        if (window.csPlayer) { onReady(); }
-        else {
-          const csScript = document.createElement('script')
-          csScript.src = '/csPlayer.js?v=' + Date.now()
-          csScript.async = true
-          csScript.onload = onReady
-          csScript.onerror = () => { if (isMounted) setPlayerError('Failed to load player script'); }
-          document.head.appendChild(csScript)
+
+      const existing = document.querySelector('script[data-csplayer-script="true"]') as HTMLScriptElement | null
+      if (existing) {
+        existing.addEventListener('load', onReady)
+        existing.addEventListener('error', onScriptError)
+        return () => {
+          existing.removeEventListener('load', onReady)
+          existing.removeEventListener('error', onScriptError)
         }
+      }
+
+      const csScript = document.createElement('script')
+      csScript.src = '/csPlayer.js'
+      csScript.async = true
+      csScript.dataset.csplayerScript = 'true'
+      csScript.addEventListener('load', onReady)
+      csScript.addEventListener('error', onScriptError)
+      document.head.appendChild(csScript)
+      return () => {
+        csScript.removeEventListener('load', onReady)
+        csScript.removeEventListener('error', onScriptError)
+      }
+    }
+
+    let cleanupCsScript = () => {}
+
+    if (window.YT && window.YT.Player) {
+      cleanupCsScript = ensureCsPlayerScript()
+    } else {
+      const previousYTReady = window.onYouTubeIframeAPIReady
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previousYTReady === 'function') previousYTReady()
+        cleanupCsScript = ensureCsPlayerScript()
       };
       if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
         const ytScript = document.createElement('script')
@@ -101,7 +124,10 @@ export function SecureVideoPlayer({
       }
     }
 
-    return () => { isMounted = false; }
+    return () => {
+      isMounted = false
+      cleanupCsScript()
+    }
   }, []);
 
   useEffect(() => {
@@ -208,4 +234,4 @@ export function SecureVideoPlayer({
       `}</style>
     </div>
   )
-}
+})

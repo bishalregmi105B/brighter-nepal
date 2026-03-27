@@ -61,7 +61,7 @@ export default function LiveClassMonitorPage() {
   if (loading) return <div className="flex items-center justify-center h-screen bg-[#0d0d1a]"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>
 
   return (
-    <div className="h-screen flex flex-col bg-[#0d0d1a] overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col bg-[#0d0d1a] overflow-hidden">
       <div className="flex items-center justify-between px-6 py-3 bg-[#1a1a4e] flex-shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/admin/live-classes" className="text-white/50 hover:text-white transition-colors"><ArrowLeft className="w-5 h-5" /></Link>
@@ -93,8 +93,8 @@ export default function LiveClassMonitorPage() {
       </div>
 
       <div className="flex-1 flex min-h-0 flex-col xl:flex-row">
-        <div className="flex-1 min-h-0 overflow-y-auto bg-[#0b0b18] p-4 md:p-6">
-          <div className="w-full max-w-6xl mx-auto space-y-4">
+        <div className="flex-1 min-h-0 overflow-hidden bg-[#0b0b18] p-4 md:p-6">
+          <div className="w-full max-w-6xl mx-auto h-full overflow-y-auto pr-1 space-y-4">
             <SecureVideoPlayer
               videoUrl={cls?.stream_url ?? ''}
               title={cls?.title}
@@ -116,7 +116,7 @@ export default function LiveClassMonitorPage() {
         </div>
         </div>
 
-        <div className="w-full xl:w-80 bg-white flex flex-col flex-shrink-0 border-t xl:border-t-0 xl:border-l border-white/10 min-h-[320px] xl:min-h-0">
+        <div className="w-full xl:w-80 bg-white flex flex-col flex-shrink-0 border-t xl:border-t-0 xl:border-l border-white/10 min-h-[320px] xl:min-h-0 overflow-hidden">
           <div className="flex border-b border-surface-container flex-shrink-0">
             <button onClick={() => setActiveTab('chat')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'chat' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
               <MessageSquare className="w-4 h-4" /> Chat ({messages.length})
@@ -164,7 +164,7 @@ export default function LiveClassMonitorPage() {
             </div>
           </div>
 
-          <div className="p-3 border-t border-surface-container flex-shrink-0">
+          <div className="border-t border-surface-container px-3 pt-3 pb-5 md:px-4 md:pb-6 flex-shrink-0">
             <div className="flex items-center gap-2">
               <input
                 value={msgInput}

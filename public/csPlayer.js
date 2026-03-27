@@ -200,13 +200,29 @@ var csPlayer = {
             if (!preferLiveEdge()) return false;
             if (userSeeked && !force) return false;
             try {
+                var state = csPlayer.csPlayers[videoTag];
+                var now = Date.now();
+                var cooldownMs = force ? 2500 : 12000;
+                if (state.lastLiveEdgeSyncAt && (now - state.lastLiveEdgeSyncAt) < cooldownMs) {
+                    return false;
+                }
+                if (state.hasAppliedInitialLiveEdge && force) {
+                    return false;
+                }
                 var p = csPlayer.csPlayers[videoTag].videoTag;
                 var dur = Number(p.getDuration());
                 var cur = Number(p.getCurrentTime());
                 if (!isFinite(dur) || dur <= 0 || !isFinite(cur)) return false;
                 var edge = Math.max(0, dur - 1);
                 var threshold = force ? 2 : 8;
-                if (edge - cur > threshold) { p.seekTo(edge, true); return true; }
+                if (edge - cur > threshold) {
+                    p.seekTo(edge, true);
+                    state.lastLiveEdgeSyncAt = now;
+                    state.hasAppliedInitialLiveEdge = true;
+                    scheduleLiveEdgeCalibration(1200);
+                    clearLiveRetries();
+                    return true;
+                }
             } catch (e) { }
             return false;
         }
@@ -214,8 +230,12 @@ var csPlayer = {
         function scheduleLiveEdgeSync() {
             if (!preferLiveEdge()) return;
             clearLiveRetries();
-            [300, 900, 1800, 3200, 5000].forEach((ms) => {
-                var id = setTimeout(() => { if (!userSeeked) syncToLiveEdge(true); }, ms);
+            [600, 1600, 3200].forEach((ms) => {
+                var id = setTimeout(() => {
+                    var state = csPlayer.csPlayers[videoTag];
+                    if (!state || userSeeked || state.hasAppliedInitialLiveEdge) return;
+                    syncToLiveEdge(true);
+                }, ms);
                 liveRetryTOs.push(id);
             });
             csPlayer.csPlayers[videoTag].LiveEdgeRetryTimeouts = [...liveRetryTOs];
@@ -237,6 +257,58 @@ var csPlayer = {
             return h > 0 ? `${pad(h)}:${pad(m)}:${pad(ss)}` : `${pad(m)}:${pad(ss)}`;
         }
 
+        function getLiveEdgeOffsetSec() {
+            var state = csPlayer.csPlayers[videoTag];
+            var offset = Number(state.liveEdgeOffsetSec || 0);
+            return isFinite(offset) && offset > 0 ? offset : 0;
+        }
+
+        function getAdjustedLiveCurrent(cur, dur) {
+            if (!csPlayer.csPlayers[videoTag].isLive) return cur;
+            var adjusted = cur + getLiveEdgeOffsetSec();
+            if (!isFinite(adjusted)) return cur;
+            if (isFinite(dur) && dur > 0) return Math.min(dur, Math.max(0, adjusted));
+            return Math.max(0, adjusted);
+        }
+
+        function captureLiveEdgeOffset() {
+            var state = csPlayer.csPlayers[videoTag];
+            if (!state || !state.isLive || userSeeked) return;
+            try {
+                var p = state.videoTag;
+                var dur = Number(p.getDuration());
+                var cur = Number(p.getCurrentTime());
+                if (!isFinite(dur) || !isFinite(cur) || dur <= 0) return;
+                var gap = dur - cur;
+                if (gap > 2) {
+                    state.liveEdgeOffsetSec = gap;
+                }
+            } catch (e) { }
+        }
+
+        function scheduleLiveEdgeCalibration(delayMs) {
+            var state = csPlayer.csPlayers[videoTag];
+            clearTimeout(state.liveEdgeCalibrationTO);
+            state.liveEdgeCalibrationTO = setTimeout(captureLiveEdgeOffset, delayMs || 1200);
+        }
+
+        function resetLiveEdgeCalibration() {
+            var state = csPlayer.csPlayers[videoTag];
+            clearTimeout(state.liveEdgeCalibrationTO);
+            state.liveEdgeCalibrationTO = null;
+            state.liveEdgeOffsetSec = 0;
+            state.hasAppliedInitialLiveEdge = false;
+            state.lastLiveEdgeSyncAt = 0;
+        }
+
+        function shouldPinToLiveEdgeUI(cur, dur) {
+            if (!preferLiveEdge() || userSeeked) return false;
+            if (!isFinite(cur) || !isFinite(dur) || dur <= 0) return false;
+            var adjustedCur = getAdjustedLiveCurrent(cur, dur);
+            // When we are intentionally following the live edge, keep the UI pinned to "now".
+            return (dur - adjustedCur) <= 8;
+        }
+
         // ── live badge ───────────────────────────────────────
         function refreshLiveBadge(isLive) {
             csPlayer.csPlayers[videoTag].isLive = isLive;
@@ -247,8 +319,12 @@ var csPlayer = {
         function goToLive() {
             var dur = csPlayer.csPlayers[videoTag].videoTag.getDuration();
             if (isFinite(dur) && dur > 0) {
+                resetLiveEdgeCalibration();
                 csPlayer.csPlayers[videoTag].videoTag.seekTo(dur - 0.5, true);
                 userSeeked = false;
+                csPlayer.csPlayers[videoTag].lastLiveEdgeSyncAt = Date.now();
+                csPlayer.csPlayers[videoTag].hasAppliedInitialLiveEdge = true;
+                scheduleLiveEdgeCalibration(1200);
             }
         }
 
@@ -266,43 +342,51 @@ var csPlayer = {
             var badge = root.querySelector('.csPlayer-live-badge');
 
             if (isLive) {
-                // Slider is locked for live — hide time, just show LIVE badge
-                curEl.style.display = 'none';
-                durEl.style.display = 'none';
-                badge?.classList.add('csPlayer-at-edge');
+                // For live DVR streams, YouTube reports elapsed live time via getDuration().
+                var adjustedCur = getAdjustedLiveCurrent(cur, dur);
+                var pinnedToEdge = shouldPinToLiveEdgeUI(cur, dur);
+                var displayCur = pinnedToEdge ? dur : adjustedCur;
+                curEl.style.display = 'block';
+                durEl.style.display = 'block';
+                curEl.textContent = formatTime(displayCur);
+                durEl.textContent = formatTime(dur);
+                if (badge) {
+                    if (pinnedToEdge || (dur > 0 && (dur - cur) <= 2)) badge.classList.add('csPlayer-at-edge');
+                    else badge.classList.remove('csPlayer-at-edge');
+                }
             } else {
                 curEl.style.display = durEl.style.display = 'block';
                 curEl.textContent = formatTime(cur);
                 durEl.textContent = formatTime(dur);
+                badge?.classList.remove('csPlayer-at-edge');
             }
         }
 
         function updateTimeSlider() {
             var p = csPlayer.csPlayers[videoTag].videoTag;
             var slider = root.querySelector('.csPlayer-prog-wrap input');
-            var isLive = csPlayer.csPlayers[videoTag].isLive;
 
-            // For LIVE: lock slider to 100%, no seeking allowed
-            if (isLive) {
-                slider.value = 100;
-                slider.disabled = true;
-                slider.style.pointerEvents = 'none';
-                slider.style.background = `linear-gradient(to right, var(--sliderSeekTrackColor) 100%, transparent 100%)`;
-                root.querySelector('.csPlayer-buf-bar').style.width = '100%';
-                return;
-            }
-
-            // For VOD: normal slider behavior
             if (csPlayer.csPlayers[videoTag].dragging || csPlayer.csPlayers[videoTag]._seekSettling) return;
             slider.disabled = false;
             slider.style.pointerEvents = 'auto';
             var cur = p.getCurrentTime();
             var dur = p.getDuration();
+            var isLive = csPlayer.csPlayers[videoTag].isLive;
+            var adjustedCur = getAdjustedLiveCurrent(cur, dur);
             var pct = 0;
-            if (isFinite(cur) && isFinite(dur) && dur > 0) {
-                pct = (cur / dur) * 100;
+            if (isFinite(adjustedCur) && isFinite(dur) && dur > 0) {
+                pct = (adjustedCur / dur) * 100;
+            }
+            if (isLive && shouldPinToLiveEdgeUI(cur, dur)) {
+                pct = 100;
             }
             pct = Math.min(100, Math.max(0, pct));
+
+            // If a live stream drifts too far from the edge and the user did not manually seek back,
+            // softly catch up in the background without the aggressive retry loop.
+            if (isLive && preferLiveEdge() && !userSeeked && isFinite(cur) && isFinite(dur) && dur > 0 && (dur - cur) > 20) {
+                syncToLiveEdge(false);
+            }
 
             var loaded = (p.getVideoLoadedFraction() || 0) * 100;
             loaded = Math.min(100, Math.max(0, isFinite(loaded) ? loaded : 0));
@@ -315,7 +399,6 @@ var csPlayer = {
 
         // While dragging: ONLY update the visual gradient, do NOT seek.
         function onSliderDrag() {
-            if (csPlayer.csPlayers[videoTag].isLive) return; // No drag on live
             clearTimeout(controlsTO);
             var slider = root.querySelector('.csPlayer-prog-wrap input');
             var pct = Number(slider.value);
@@ -323,23 +406,33 @@ var csPlayer = {
                 `linear-gradient(to right, var(--sliderSeekTrackColor) ${pct}%, transparent ${pct}%)`;
         }
 
-        // On release: commit the final seek position to YouTube (VOD only).
+        // On release: commit the final seek position to YouTube.
         function commitSeek() {
-            if (csPlayer.csPlayers[videoTag].isLive) return; // No seek on live
-            markSeeked();
+            var state = csPlayer.csPlayers[videoTag];
             var slider = root.querySelector('.csPlayer-prog-wrap input');
-            var dur = csPlayer.csPlayers[videoTag].videoTag.getDuration();
+            var dur = state.videoTag.getDuration();
             var pct = Number(slider.value);
             if (isFinite(dur) && dur > 0) {
                 var targetSec = (pct / 100) * dur;
-                csPlayer.csPlayers[videoTag].videoTag.seekTo(targetSec, true);
+                if (state.isLive) {
+                    targetSec = Math.max(0, targetSec - getLiveEdgeOffsetSec());
+                }
+                if (state.isLive && (dur - (targetSec + getLiveEdgeOffsetSec())) <= 2) {
+                    userSeeked = false;
+                    state.lastLiveEdgeSyncAt = Date.now();
+                    state.hasAppliedInitialLiveEdge = true;
+                    scheduleLiveEdgeCalibration(1200);
+                } else {
+                    markSeeked();
+                }
+                state.videoTag.seekTo(targetSec, true);
             }
             resetControlsTO();
             // Block auto-update from snapping slider back while YouTube buffers
-            csPlayer.csPlayers[videoTag]._seekSettling = true;
-            clearTimeout(csPlayer.csPlayers[videoTag]._seekSettleTO);
-            csPlayer.csPlayers[videoTag]._seekSettleTO = setTimeout(() => {
-                csPlayer.csPlayers[videoTag]._seekSettling = false;
+            state._seekSettling = true;
+            clearTimeout(state._seekSettleTO);
+            state._seekSettleTO = setTimeout(() => {
+                state._seekSettling = false;
             }, 2500);
         }
 
@@ -484,11 +577,16 @@ var csPlayer = {
                     var disp = _csQualityMap[qv] || qv;
                     box.querySelector('.csPlayer-settings-section:nth-of-type(2) b').textContent = disp;
                     try {
+                        var state = csPlayer.csPlayers[videoTag];
                         var player = csPlayer.csPlayers[videoTag].videoTag;
                         var currentTime = Number(player.getCurrentTime()) || 0;
                         var videoData = player.getVideoData ? player.getVideoData() : null;
                         var currentVideoId = videoData?.video_id || csPlayer.csPlayers[videoTag].params.defaultId;
                         var suggestedQuality = qv === 'auto' ? 'default' : qv;
+                        resetLiveEdgeCalibration();
+                        if (state.isLive) {
+                            userSeeked = false;
+                        }
 
                         player.loadVideoById({
                             videoId: currentVideoId,
@@ -549,7 +647,7 @@ var csPlayer = {
                     refreshLiveBadge(detectLive());
                 }
 
-                if (!userSeeked) syncToLiveEdge(true);
+                if (!userSeeked && !st.hasAppliedInitialLiveEdge) syncToLiveEdge(true);
 
                 ppBtn.className = 'ti csPlayer-play-pause-btn ti-player-pause-filled';
                 if (botPlay) botPlay.className = 'ti bottom-play-btn ti-player-pause-filled';
@@ -741,6 +839,9 @@ var csPlayer = {
                 isLive: false,
                 liveDetected: false,
                 dragging: false,
+                hasAppliedInitialLiveEdge: false,
+                lastLiveEdgeSyncAt: 0,
+                liveEdgeOffsetSec: 0,
             };
 
             csPlayer.preSetup(videoTag, 'csPlayer-' + videoTag).then(() => {

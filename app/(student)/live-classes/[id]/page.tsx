@@ -109,7 +109,7 @@ export default function LiveClassRoomPage() {
   // ──────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-screen flex flex-col lg:flex-row bg-[#f8f9fb] overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col lg:flex-row bg-[#f8f9fb] overflow-hidden">
       {/* Video Side */}
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
         <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-white flex-shrink-0 z-20">
@@ -139,8 +139,8 @@ export default function LiveClassRoomPage() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto bg-white p-3 md:p-6">
-          <div className="w-full max-w-6xl mx-auto space-y-4">
+        <div className="flex-1 min-h-0 overflow-hidden bg-white p-3 md:p-6">
+          <div className="w-full max-w-6xl mx-auto h-full overflow-y-auto pr-1 space-y-4">
             <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 flex items-center justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-3 mb-1">
@@ -173,7 +173,7 @@ export default function LiveClassRoomPage() {
       </div>
 
       {/* Chat Panel */}
-      <div className="w-full flex-1 lg:flex-none lg:w-80 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-slate-200/10 min-h-[320px] lg:min-h-0">
+      <div className="w-full flex-1 lg:flex-none lg:w-80 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-slate-200/10 min-h-[320px] lg:min-h-0 overflow-hidden">
         <div className="flex border-b border-surface-container bg-surface-container-low flex-shrink-0">
           {[{ id: 'chat', label: 'Live Chat' }, { id: 'qa', label: 'Q&A' }].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as 'chat' | 'qa')} className={cn(
@@ -227,7 +227,7 @@ export default function LiveClassRoomPage() {
           <div ref={messagesEnd} />
         </div>
 
-        <div className="p-3 border-t border-surface-container bg-surface-container-low flex-shrink-0">
+        <div className="border-t border-surface-container bg-surface-container-low px-3 pt-3 pb-5 md:px-4 md:pb-6 flex-shrink-0">
           <div className="flex items-center gap-2">
             <input
               value={input}
