@@ -95,10 +95,13 @@ export default function StudentDashboardPage() {
                 <div className="relative z-10 w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 cursor-pointer hover:bg-on-primary-container transition-colors">
                   <svg className="w-7 h-7 text-white fill-white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
-                <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-white text-[10px] font-black tracking-widest uppercase">LIVE</span>
-                  <span className="text-white/80 text-[10px] font-medium">• {liveClass?.watchers?.toLocaleString()} Watching</span>
+                <div className="absolute top-4 left-4 flex items-center gap-2.5 bg-black/65 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
+                  <span className="relative inline-flex h-3.5 w-3.5 flex-shrink-0">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-red-500/70 animate-ping" />
+                    <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white/40" />
+                  </span>
+                  <span className="text-white text-xs font-black tracking-[0.22em] uppercase">LIVE</span>
+                  <span className="text-white/85 text-xs font-semibold">• {liveClass?.watchers?.toLocaleString()} Watching</span>
                 </div>
               </>
             ) : (

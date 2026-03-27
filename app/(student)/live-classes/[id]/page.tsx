@@ -115,19 +115,22 @@ export default function LiveClassRoomPage() {
         <div className="h-16 md:h-[72px] px-4 flex items-center justify-between border-b border-surface-container/10 bg-white flex-shrink-0 z-20">
           <div className="flex items-center gap-4">
             <button className="md:hidden text-slate-500 hover:text-[#1a1a4e]" onClick={() => router.back()}><ArrowLeft className="w-5 h-5"/></button>
-            <span className="flex items-center gap-1.5 bg-error/10 px-2.5 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
-              <span className="text-error text-[10px] font-black tracking-widest uppercase">Live</span>
+            <span className="flex items-center gap-2.5 bg-error/10 border border-error/20 px-3.5 py-1.5 rounded-full shadow-sm">
+              <span className="relative inline-flex h-3.5 w-3.5 flex-shrink-0">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-error/70 animate-ping" />
+                <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-error ring-2 ring-error/30" />
+              </span>
+              <span className="text-error text-xs font-black tracking-[0.2em] uppercase">LIVE</span>
             </span>
-            <div>
-              <p className="font-headline font-bold text-[#1a1a4e] text-sm">{cls?.title ?? 'Live Session'}</p>
-              <p className="text-slate-500 text-[10px]">{cls?.teacher ?? '—'} · {cls?.subject ?? '—'}</p>
-            </div>
+            <p className="font-headline font-bold text-[#1a1a4e] text-sm">Live Class</p>
           </div>
           <div className="flex items-center gap-3 text-slate-500">
             {onlineCount > 0 && (
-              <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              <span className="flex items-center gap-1.5 text-xs text-green-600 font-semibold">
+                <span className="relative inline-flex h-2.5 w-2.5 flex-shrink-0">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-green-500/70 animate-ping" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+                </span>
                 {onlineCount} live
               </span>
             )}
@@ -136,33 +139,34 @@ export default function LiveClassRoomPage() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto bg-[#0b1020] p-3 md:p-6">
-          <div className="w-full max-w-6xl mx-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-white p-3 md:p-6">
+          <div className="w-full max-w-6xl mx-auto space-y-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 flex items-center justify-between gap-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-3 mb-1">
+                  <span className="bg-[#1a1a4e]/5 text-[#1a1a4e] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{cls?.subject}</span>
+                  <span className="text-slate-500 text-xs font-medium">{formatDuration(cls?.duration_min)}</span>
+                </div>
+                <h1 className="text-lg md:text-xl font-headline font-bold text-[#1a1a4e]">{cls?.title}</h1>
+              </div>
+              <div className="flex items-center gap-2 text-right">
+                <div>
+                  <p className="font-bold text-xs text-[#1a1a4e]">Instructor</p>
+                  <p className="text-slate-500 text-[10px]">{cls?.teacher}</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[#1a1a4e] text-xs border border-slate-200">
+                  {cls?.teacher?.[0] ?? 'T'}
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full">
             <SecureVideoPlayer
               videoUrl={cls?.stream_url ?? ''}
               title={cls?.title}
               preferLiveEdge
               className="w-full rounded-[24px] shadow-[0_20px_80px_rgba(0,0,0,0.25)]"
             />
-          </div>
-        </div>
-
-        {/* Class Details */}
-        <div className="p-4 bg-white border-t border-surface-container/10 flex-shrink-0 flex items-center justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-3 mb-1">
-              <span className="bg-[#1a1a4e]/5 text-[#1a1a4e] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">{cls?.subject}</span>
-              <span className="text-slate-500 text-xs font-medium">{formatDuration(cls?.duration_min)}</span>
-            </div>
-            <h1 className="text-lg font-headline font-bold text-[#1a1a4e]">{cls?.title}</h1>
-          </div>
-          <div className="flex items-center gap-2 text-right">
-            <div>
-              <p className="font-bold text-xs text-[#1a1a4e]">Instructor</p>
-              <p className="text-slate-500 text-[10px]">{cls?.teacher}</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[#1a1a4e] text-xs border border-slate-200">
-              {cls?.teacher?.[0] ?? 'T'}
             </div>
           </div>
         </div>

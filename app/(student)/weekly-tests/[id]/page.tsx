@@ -55,7 +55,7 @@ export default function WeeklyTestDetailPage() {
   const total = result.total ?? test.total_questions ?? 0
   const percentage = result.percentage ?? (total > 0 ? Math.round((score / total) * 100) : 0)
 
-  if (!isCompleted) {
+  if (!isCompleted && !result.has_result) {
     return (
       <div className="p-6 md:p-10 max-w-3xl mx-auto space-y-8">
         <Link href="/weekly-tests" className="flex items-center gap-2 text-sm font-semibold text-on-surface-variant hover:text-on-primary-container transition-colors">
@@ -162,7 +162,7 @@ export default function WeeklyTestDetailPage() {
             {result.source === 'google_forms' ? 'Google Forms Result' : 'Internal Result'}
           </div>
           <h1 className="font-headline font-black text-3xl md:text-4xl mb-2">{test.title}</h1>
-          <p className="text-white/60 mb-6">{test.subject} · Completed</p>
+          <p className="text-white/60 mb-6">{test.subject} · {isCompleted ? 'Completed' : 'Latest Synced Result'}</p>
           <p className="text-white/70 text-sm">
             Submitted {result.submitted_at ? new Date(result.submitted_at).toLocaleString() : 'recently'}.
           </p>

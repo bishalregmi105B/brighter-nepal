@@ -16,12 +16,7 @@ export const subjects: Subject[] = [
 ]
 
 export const targetExams = [
-  'IOE Entrance',
-  'CEE (Medical)',
-  'IOM Entrance',
-  'CSIT',
-  'BCA/BIT',
-  'Other',
+  'Bridge Course',
 ]
 
 export const streams = [

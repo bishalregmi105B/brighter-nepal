@@ -24,6 +24,7 @@ function DifficultyPill({ difficulty, featured }: { difficulty: string; featured
 export default function ModelSetsPage() {
   const [sets,      setSets]     = useState<ModelSet[]>([])
   const [targets,   setTargets]  = useState<string[]>([])
+  const [resultAvailability, setResultAvailability] = useState<Record<number, boolean>>({})
   const [loading,   setLoading]  = useState(true)
   const [error,     setError]    = useState('')
   const [activeTab, setActiveTab] = useState('All Sets')
@@ -47,6 +48,33 @@ export default function ModelSetsPage() {
     }
     return result
   }, [sets, sortBy])
+
+  useEffect(() => {
+    let cancelled = false
+    if (sets.length === 0) {
+      setResultAvailability({})
+      return
+    }
+
+    Promise.allSettled(
+      sets.map(async (set) => {
+        const res = await modelSetService.getMyResult(set.id)
+        return [set.id, Boolean(res.data?.has_result)] as const
+      })
+    ).then((items) => {
+      if (cancelled) return
+      const next: Record<number, boolean> = {}
+      items.forEach((entry) => {
+        if (entry.status !== 'fulfilled') return
+        next[entry.value[0]] = entry.value[1]
+      })
+      setResultAvailability(next)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sets])
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -104,6 +132,7 @@ export default function ModelSetsPage() {
           {displayed.map((set, idx) => {
             const isFeatured = idx === 1 // highlight second item as featured
             const studentFormsUrl = toStudentGoogleFormUrl(set.forms_view_url, set.forms_url)
+            const hasResult = Boolean(resultAvailability[set.id])
             return (
               <div key={set.id} className={cn(
                 'group rounded-2xl p-6 flex flex-col transition-all duration-300 relative overflow-hidden',
@@ -136,33 +165,43 @@ export default function ModelSetsPage() {
                   </div>
                 </div>
 
-                <div className="mt-auto flex items-center justify-between">
+                <div className="mt-auto flex items-center justify-between gap-2">
                   <DifficultyPill difficulty={set.difficulty} featured={isFeatured} />
-                  {studentFormsUrl ? (
-                    <a
-                      href={studentFormsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        'font-bold px-6 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 text-sm shadow-sm',
-                        isFeatured ? 'bg-on-primary-container text-white hover:shadow-[0_0_20px_rgba(207,110,58,0.4)]'
-                        : 'bg-on-primary-container text-white hover:opacity-90'
-                      )}
-                    >
-                      <ExternalLink className="w-4 h-4" /> Open Form
-                    </a>
-                  ) : (
-                    <Link
-                      href={`/model-sets/${set.id}`}
-                      className={cn(
-                        'font-bold px-6 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 text-sm shadow-sm',
-                        isFeatured ? 'bg-on-primary-container text-white hover:shadow-[0_0_20px_rgba(207,110,58,0.4)]'
-                        : 'bg-on-primary-container text-white hover:opacity-90'
-                      )}
-                    >
-                      <Play className="w-4 h-4 fill-current" /> Start Exam
-                    </Link>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {studentFormsUrl ? (
+                      <a
+                        href={studentFormsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          'font-bold px-4 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 text-sm shadow-sm',
+                          isFeatured ? 'bg-on-primary-container text-white hover:shadow-[0_0_20px_rgba(207,110,58,0.4)]'
+                          : 'bg-on-primary-container text-white hover:opacity-90'
+                        )}
+                      >
+                        <ExternalLink className="w-4 h-4" /> Open Form
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/model-sets/${set.id}`}
+                        className={cn(
+                          'font-bold px-4 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 text-sm shadow-sm',
+                          isFeatured ? 'bg-on-primary-container text-white hover:shadow-[0_0_20px_rgba(207,110,58,0.4)]'
+                          : 'bg-on-primary-container text-white hover:opacity-90'
+                        )}
+                      >
+                        <Play className="w-4 h-4 fill-current" /> Start Exam
+                      </Link>
+                    )}
+                    {hasResult && (
+                      <Link
+                        href={`/model-sets/${set.id}/results`}
+                        className="font-bold px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-[#1a1a4e] active:scale-95 transition-all text-sm hover:bg-slate-50"
+                      >
+                        View Result
+                      </Link>
+                    )}
+                  </div>
                 </div>
 
                 {isFeatured && (

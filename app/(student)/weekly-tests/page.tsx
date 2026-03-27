@@ -1,16 +1,33 @@
 'use client'
 // Student Weekly Tests — real API via weeklyTestService
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Users, TrendingUp, BarChart2, ChevronRight, Loader2, Zap, CheckCircle2, Clock } from 'lucide-react'
-import { weeklyTestService, type WeeklyTest } from '@/services/weeklyTestService'
-import { cn } from '@/lib/utils/cn'
+import { weeklyTestService, type ExamResult, type WeeklyTest } from '@/services/weeklyTestService'
 import { toStudentGoogleFormUrl } from '@/lib/utils/googleForms'
 
-const chartBars = [12, 20, 24, 16, 32, 28]
+function formatRelativeTime(value?: string | null): string {
+  if (!value) return 'Just now'
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return 'Just now'
+  const diffSec = Math.max(0, Math.floor((Date.now() - dt.getTime()) / 1000))
+  if (diffSec < 60) return `${diffSec}s ago`
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour < 24) return `${diffHour}h ago`
+  const diffDay = Math.floor(diffHour / 24)
+  if (diffDay < 30) return `${diffDay}d ago`
+  const diffMonth = Math.floor(diffDay / 30)
+  if (diffMonth < 12) return `${diffMonth}mo ago`
+  const diffYear = Math.floor(diffMonth / 12)
+  return `${diffYear}y ago`
+}
 
 export default function WeeklyTestsPage() {
   const [tests,   setTests]   = useState<WeeklyTest[]>([])
+  const [resultsByTest, setResultsByTest] = useState<Record<number, ExamResult>>({})
+  const [resultsLoaded, setResultsLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState('')
 
@@ -20,10 +37,48 @@ export default function WeeklyTestsPage() {
     }).catch((e) => setError(e.message)).finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    if (tests.length === 0) {
+      setResultsByTest({})
+      setResultsLoaded(true)
+      return
+    }
+    setResultsLoaded(false)
+
+    Promise.allSettled(
+      tests.map(async (test) => {
+        const res = await weeklyTestService.getMyResult(test.id)
+        return [test.id, res.data] as const
+      })
+    ).then((items) => {
+      if (cancelled) return
+      const next: Record<number, ExamResult> = {}
+      items.forEach((entry) => {
+        if (entry.status !== 'fulfilled') return
+        next[entry.value[0]] = entry.value[1]
+      })
+      setResultsByTest(next)
+      setResultsLoaded(true)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [tests])
+
   const liveTest      = tests.find((t) => t.status === 'live')
   const scheduledTests = tests.filter((t) => t.status === 'scheduled')
-  const pastTests     = tests.filter((t) => t.status === 'completed')
   const liveTestFormUrl = toStudentGoogleFormUrl(liveTest?.forms_view_url, liveTest?.forms_url)
+  const liveHasResult = liveTest ? Boolean(resultsByTest[liveTest.id]?.has_result) : false
+  const historyTests = useMemo(() => {
+    const list = tests.filter((test) => Boolean(resultsByTest[test.id]?.has_result))
+    return list.sort((a, b) => {
+      const aTs = new Date(resultsByTest[a.id]?.submitted_at || 0).getTime()
+      const bTs = new Date(resultsByTest[b.id]?.submitted_at || 0).getTime()
+      return bTs - aTs
+    })
+  }, [tests, resultsByTest])
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-on-primary-container" /></div>
   if (error)   return <div className="p-10 text-center text-red-500 font-medium">{error}</div>
@@ -46,14 +101,24 @@ export default function WeeklyTestsPage() {
               {liveTest.duration_min} mins · {liveTest.question_count} questions · {liveTest.subject}
             </p>
             {liveTestFormUrl ? (
-              <a
-                href={liveTestFormUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block bg-on-primary-container text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-lg shadow-on-primary-container/20"
-              >
-                Start Test Now →
-              </a>
+              <div className="flex flex-wrap items-center gap-3">
+                <a
+                  href={liveTestFormUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-on-primary-container text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-lg shadow-on-primary-container/20"
+                >
+                  Start Test Now →
+                </a>
+                {liveHasResult && (
+                  <Link
+                    href={`/weekly-tests/${liveTest.id}`}
+                    className="inline-block bg-white/10 border border-white/20 text-white px-6 py-4 rounded-xl font-bold text-base hover:bg-white/20 transition-all"
+                  >
+                    View Result
+                  </Link>
+                )}
+              </div>
             ) : (
               <div className="inline-flex items-center gap-3 bg-white/10 border border-white/20 px-6 py-3.5 rounded-xl text-white font-bold">
                 <Clock className="w-5 h-5 opacity-60" /> Test Not Started
@@ -98,33 +163,42 @@ export default function WeeklyTestsPage() {
         </section>
       )}
 
-      {/* ── Assessment History ────────────────────────────────── */}
-      {pastTests.length > 0 && (
+      {/* ── Assessment History (real per-user results) ───────── */}
+      {resultsLoaded && historyTests.length > 0 && (
         <section className="space-y-6">
           <div className="flex items-end justify-between border-b border-surface-container-highest pb-4">
             <h3 className="text-3xl font-headline font-extrabold text-[#1a1a4e]">Assessment History</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pastTests.map((test) => (
+            {historyTests.map((test) => {
+              const result = resultsByTest[test.id]
+              const total = result?.total ?? test.total_questions ?? 0
+              const score = result?.score ?? 0
+              const percentage = result?.percentage ?? (total > 0 ? Math.round((score / total) * 100) : 0)
+              return (
               <div key={test.id} className="bg-white p-6 rounded-2xl shadow-sm border border-transparent hover:border-surface-container-highest transition-all">
                 <div className="flex items-center gap-1.5 mb-3">
                   <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                  <span className="text-[10px] font-bold text-green-600 uppercase">Completed</span>
+                  <span className="text-[10px] font-bold text-green-600 uppercase">
+                    {result?.source === 'google_forms' ? 'Synced' : 'Completed'}
+                  </span>
                   <span className="text-[10px] text-slate-400 ml-auto">{test.subject}</span>
                 </div>
                 <h5 className="font-headline font-bold text-on-surface mb-4 leading-snug">{test.title}</h5>
+                <div className="mb-4 text-xs text-slate-500 font-medium">
+                  <p>{score} / {total} • {percentage}%</p>
+                  <p>{formatRelativeTime(result?.submitted_at)}</p>
+                </div>
                 <div className="flex items-center justify-between border-t border-surface-container-low pt-4">
-                  <div className="h-8 flex items-end gap-1">
-                    {chartBars.map((h, i) => (
-                      <div key={i} className={cn('w-2 rounded-full', i >= 3 ? 'bg-on-tertiary-container' : 'bg-surface-container-high')} style={{ height: `${h}px` }} />
-                    ))}
-                  </div>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    {result?.source === 'google_forms' ? 'Google Forms' : 'Internal'}
+                  </span>
                   <Link href={`/weekly-tests/${test.id}`} className="text-on-secondary-fixed font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
-                    Review <BarChart2 className="w-4 h-4" />
+                    View Result <BarChart2 className="w-4 h-4" />
                   </Link>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </section>
       )}

@@ -74,7 +74,10 @@ export default function LiveClassesPage() {
         </div>
         {liveCount > 0 && (
           <div className="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-outline-variant/10">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="relative inline-flex h-3.5 w-3.5 flex-shrink-0">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-red-500/70 animate-ping" />
+              <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-red-200" />
+            </span>
             <span className="text-sm font-bold text-[#1a1a4e]">{liveCount} Live Now</span>
             <span className="text-xs text-slate-400 font-medium">{classes.find(c=>c.status==='live')?.watchers?.toLocaleString()} watching</span>
           </div>
@@ -87,8 +90,12 @@ export default function LiveClassesPage() {
           <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-on-primary-container/20 to-transparent pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
             <div className="w-full md:w-1/2 space-y-5">
-              <div className="inline-flex items-center gap-2 bg-on-primary-container px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> Latest Live Session
+              <div className="inline-flex items-center gap-2.5 bg-on-primary-container px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest">
+                <span className="relative inline-flex h-3.5 w-3.5 flex-shrink-0">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-white/70 animate-ping" />
+                  <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-white ring-2 ring-white/40" />
+                </span>
+                Latest Live Session
               </div>
               <h2 className="text-3xl md:text-4xl font-headline font-extrabold tracking-tight leading-tight">
                 {featuredLive.title}
@@ -106,9 +113,12 @@ export default function LiveClassesPage() {
                   <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
                     <Play className="w-8 h-8 text-white fill-white" />
                   </div>
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-500/90 px-2.5 py-1 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    <span className="text-white text-[10px] font-black tracking-widest">LIVE</span>
+                  <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-500/90 px-3 py-1.5 rounded-full shadow-lg">
+                    <span className="relative inline-flex h-3 w-3 flex-shrink-0">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-white/70 animate-ping" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-white" />
+                    </span>
+                    <span className="text-white text-xs font-black tracking-[0.2em]">LIVE</span>
                   </div>
                 </div>
                 <Link href={`/live-classes/${featuredLive.id}`} className="w-full block bg-[#c0622f] text-white text-base font-black px-6 py-3.5 rounded-xl text-center hover:bg-[#a14f24] active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
@@ -142,9 +152,12 @@ export default function LiveClassesPage() {
                       <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
                         <Play className="w-7 h-7 text-white fill-white" />
                       </div>
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-500/90 px-2.5 py-1 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        <span className="text-white text-[10px] font-black tracking-widest">LIVE</span>
+                      <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-500/90 px-3 py-1.5 rounded-full shadow-lg">
+                        <span className="relative inline-flex h-3 w-3 flex-shrink-0">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-white/70 animate-ping" />
+                          <span className="relative inline-flex h-3 w-3 rounded-full bg-white" />
+                        </span>
+                        <span className="text-white text-xs font-black tracking-[0.2em]">LIVE</span>
                       </div>
                       {(cls.watchers ?? 0) > 0 && (
                         <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full">

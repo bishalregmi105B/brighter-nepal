@@ -12,7 +12,7 @@ const steps = [
   { number: 3, label: 'Finish' },
 ]
 
-const examOptions = ['IOE Entrance', 'CEE (Medical)', 'IOM Entrance', 'CSIT', 'BCA/BIT', 'Other']
+const examOptions = ['Bridge Course']
 const streamOptions = ['Science', 'Management', 'Humanities', 'Education', 'Law']
 const sourceOptions = ['Social Media', 'Friend / Recommendation', 'Search Engine', 'Campus Ambassador', 'Advertisement']
 
@@ -23,13 +23,15 @@ export default function OnboardingPage() {
   const [location, setLocation] = useState('')
   const [stream, setStream] = useState(streamOptions[0])
   const [heardFrom, setHeardFrom] = useState(sourceOptions[0])
-  const [selectedExams, setSelectedExams] = useState<string[]>(['IOE Entrance'])
+  const [selectedExams, setSelectedExams] = useState<string[]>(['Bridge Course'])
   const [finishing, setFinishing] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
   const toggleExam = (exam: string) => {
     setSelectedExams(prev => (
-      prev.includes(exam) ? prev.filter(e => e !== exam) : [...prev, exam]
+      prev.includes(exam)
+        ? (prev.length === 1 ? prev : prev.filter(e => e !== exam))
+        : [...prev, exam]
     ))
   }
 
