@@ -30,6 +30,10 @@ export interface TypingUser {
 
 const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_URL ?? 'http://localhost:5001'
 
+const DEBUG = true
+const log = (...args: unknown[]) => DEBUG && console.log('[useLiveChat]', ...args)
+const warn = (...args: unknown[]) => DEBUG && console.warn('[useLiveChat]', ...args)
+
 export function useLiveChat(classId: number | null) {
   const [messages,    setMessages]    = useState<LiveChatMessage[]>([])
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
@@ -41,12 +45,16 @@ export function useLiveChat(classId: number | null) {
   const tempIdRef   = useRef(-1)
 
   useEffect(() => {
-    if (!classId) return
+    log('effect fired — classId:', classId)
+    if (!classId) { log('⏭ skipping: no classId'); return }
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('bn_token') : null
-    if (!token) return
+    log('token present:', !!token, 'length:', token?.length)
+    if (!token) { warn('⏭ skipping: no token in localStorage'); return }
 
     const room = `live:${classId}`
+    log('connecting to CHAT_URL:', CHAT_URL, 'room:', room)
+
     const socket = io(CHAT_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -57,34 +65,48 @@ export function useLiveChat(classId: number | null) {
     socketRef.current = socket
 
     socket.on('connect', () => {
+      log('✅ connected — socket.id:', socket.id)
       setConnected(true)
+      log('emitting join — room:', room)
       socket.emit('join', { token, room })
     })
 
-    socket.on('disconnect', () => setConnected(false))
+    socket.on('connect_error', (err) => {
+      warn('❌ connect_error:', err.message, err)
+    })
+
+    socket.on('disconnect', (reason) => {
+      warn('🔌 disconnected — reason:', reason)
+      setConnected(false)
+    })
 
     socket.on('error', (data: { msg: string }) => {
-      console.warn('[live-chat] error:', data.msg)
+      warn('⚠️ server error event:', data.msg)
     })
 
     socket.on('history', (history: LiveChatMessage[]) => {
+      log('📜 history received — count:', history?.length, 'sample:', history?.[0])
       setMessages(history)
     })
 
     socket.on('message', (msg: LiveChatMessage) => {
+      log('💬 message received:', { id: msg.id, user_id: msg.user_id, sender: msg.sender_name, text: msg.text?.slice(0, 50), pending: msg.pending })
       setMessages(prev => {
-        const hasReal = prev.some(m => !m.pending && m.id === msg.id)
-        if (hasReal) return prev
+        // Skip duplicate check when id is null (server sends null before DB write)
+        const hasReal = msg.id != null && prev.some(m => !m.pending && m.id === msg.id)
+        if (hasReal) { log('↩️ duplicate real msg, skipping'); return prev }
 
         // Replace optimistic message from same user with same text
         const withoutOptimistic = prev.filter(m =>
           !(m.pending && m.user_id === msg.user_id && m.text === msg.text)
         )
+        log('messages after merge:', withoutOptimistic.length + 1)
         return [...withoutOptimistic, msg]
       })
     })
 
     socket.on('typing', (data: TypingUser & { is_typing: boolean }) => {
+      log('⌨️ typing:', data)
       setTypingUsers(prev => {
         const rest = prev.filter(u => u.user_id !== data.user_id)
         return data.is_typing ? [...rest, { user_id: data.user_id, name: data.name }] : rest
@@ -92,10 +114,17 @@ export function useLiveChat(classId: number | null) {
     })
 
     socket.on('presence', (data: { room: string; online_count: number }) => {
+      log('👥 presence:', data)
       if (data.room === room) setOnlineCount(data.online_count)
     })
 
+    // ── Catch-all for debugging ───────────────────────────────────────────────
+    socket.onAny((event, ...args) => {
+      log('📡 [ANY]', event, args)
+    })
+
     return () => {
+      log('🧹 cleanup — leaving room:', room)
       socket.emit('leave', { room })
       socket.disconnect()
       socketRef.current = null
@@ -105,7 +134,8 @@ export function useLiveChat(classId: number | null) {
 
   // ── Send message — optimistic UI ──────────────────────────────────────────
   const sendMessage = useCallback((text: string, image_url?: string) => {
-    if (!classId || !socketRef.current) return
+    log('sendMessage called — classId:', classId, 'socketRef:', !!socketRef.current, 'text:', text?.slice(0, 50))
+    if (!classId || !socketRef.current) { warn('sendMessage: bailing — no classId or socket'); return }
 
     const stored = typeof window !== 'undefined' ? localStorage.getItem('bn_user') : null
     const me = stored ? JSON.parse(stored) : null
