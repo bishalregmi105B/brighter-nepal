@@ -263,12 +263,9 @@ var csPlayer = {
             return isFinite(offset) && offset > 0 ? offset : 0;
         }
 
-        function getAdjustedLiveCurrent(cur, dur) {
-            if (!csPlayer.csPlayers[videoTag].isLive) return cur;
-            var adjusted = cur + getLiveEdgeOffsetSec();
-            if (!isFinite(adjusted)) return cur;
-            if (isFinite(dur) && dur > 0) return Math.min(dur, Math.max(0, adjusted));
-            return Math.max(0, adjusted);
+        // Returns raw cur — offset system removed to prevent stale-offset display jumps
+        function getAdjustedLiveCurrent(cur) {
+            return isFinite(cur) && cur >= 0 ? cur : 0;
         }
 
         function captureLiveEdgeOffset() {
@@ -304,41 +301,15 @@ var csPlayer = {
             state.lastLiveDisplayTickAt = 0;
         }
 
+        // Returns raw current time — no artificial wall-clock interpolation to avoid visual jumps on live
         function getDisplayedLiveCurrent(rawCur) {
-            var state = csPlayer.csPlayers[videoTag];
-            var now = Date.now();
-            rawCur = isFinite(rawCur) && rawCur >= 0 ? rawCur : 0;
-
-            if (
-                !isFinite(state.lastRawLiveCurrentSec) ||
-                !isFinite(state.displayLiveCurrentSec) ||
-                !state.lastLiveDisplayTickAt
-            ) {
-                state.lastRawLiveCurrentSec = rawCur;
-                state.displayLiveCurrentSec = rawCur;
-                state.lastLiveDisplayTickAt = now;
-                return rawCur;
-            }
-
-            if (Math.abs(rawCur - state.lastRawLiveCurrentSec) > 0.2 || state.playerState !== 'playing') {
-                state.lastRawLiveCurrentSec = rawCur;
-                state.displayLiveCurrentSec = rawCur;
-                state.lastLiveDisplayTickAt = now;
-                return rawCur;
-            }
-
-            var elapsed = Math.max(0, (now - state.lastLiveDisplayTickAt) / 1000);
-            state.displayLiveCurrentSec = Math.max(rawCur, state.displayLiveCurrentSec + elapsed);
-            state.lastLiveDisplayTickAt = now;
-            return state.displayLiveCurrentSec;
+            return isFinite(rawCur) && rawCur >= 0 ? rawCur : 0;
         }
 
         function shouldPinToLiveEdgeUI(cur, dur) {
-            if (!preferLiveEdge() || userSeeked) return false;
+            if (userSeeked) return false;
             if (!isFinite(cur) || !isFinite(dur) || dur <= 0) return false;
-            var adjustedCur = getAdjustedLiveCurrent(cur, dur);
-            // When we are intentionally following the live edge, keep the UI pinned to "now".
-            return (dur - adjustedCur) <= 8;
+            return (dur - cur) <= 15;
         }
 
         // ── live badge ───────────────────────────────────────
@@ -349,14 +320,17 @@ var csPlayer = {
         }
 
         function goToLive() {
-            var dur = csPlayer.csPlayers[videoTag].videoTag.getDuration();
+            var state = csPlayer.csPlayers[videoTag];
+            var dur = Number(state.videoTag.getDuration());
             if (isFinite(dur) && dur > 0) {
-                resetLiveEdgeCalibration();
-                csPlayer.csPlayers[videoTag].videoTag.seekTo(dur - 0.5, true);
+                state.videoTag.seekTo(dur, true);
                 userSeeked = false;
-                csPlayer.csPlayers[videoTag].lastLiveEdgeSyncAt = Date.now();
-                csPlayer.csPlayers[videoTag].hasAppliedInitialLiveEdge = true;
-                scheduleLiveEdgeCalibration(1200);
+                state.lastLiveEdgeSyncAt = Date.now();
+                state.hasAppliedInitialLiveEdge = true;
+                // Block slider from snapping back while YouTube buffers to live edge
+                state._seekSettling = true;
+                clearTimeout(state._seekSettleTO);
+                state._seekSettleTO = setTimeout(() => { state._seekSettling = false; }, 2000);
             }
         }
 
@@ -374,16 +348,20 @@ var csPlayer = {
             var badge = root.querySelector('.csPlayer-live-badge');
 
             if (isLive) {
-                var displayLiveCur = getDisplayedLiveCurrent(cur);
-                var adjustedCur = getAdjustedLiveCurrent(displayLiveCur, dur);
-                var pinnedToEdge = shouldPinToLiveEdgeUI(displayLiveCur, dur);
-                var displayCur = pinnedToEdge ? dur : adjustedCur;
-                curEl.style.display = 'block';
                 durEl.style.display = 'none';
-                curEl.textContent = formatTime(displayCur);
+                var behindSec = (dur > 0) ? Math.max(0, dur - cur) : 0;
+                var atEdge = behindSec <= 12;
                 if (badge) {
-                    if (pinnedToEdge || (dur > 0 && (dur - displayLiveCur) <= 2)) badge.classList.add('csPlayer-at-edge');
+                    if (atEdge) badge.classList.add('csPlayer-at-edge');
                     else badge.classList.remove('csPlayer-at-edge');
+                }
+                if (atEdge) {
+                    curEl.style.display = 'none';
+                    curEl.classList.remove('csPlayer-behind-live');
+                } else {
+                    curEl.style.display = 'block';
+                    curEl.classList.add('csPlayer-behind-live');
+                    curEl.textContent = '\u2212\u00a0' + formatTime(behindSec);
                 }
             } else {
                 curEl.style.display = durEl.style.display = 'block';
@@ -405,21 +383,13 @@ var csPlayer = {
             cur = isFinite(cur) && cur >= 0 ? cur : 0;
             dur = isFinite(dur) && dur >= 0 ? dur : 0;
             var isLive = csPlayer.csPlayers[videoTag].isLive;
-            var adjustedCur = getAdjustedLiveCurrent(cur, dur);
-            var pct = 0;
-            if (isFinite(adjustedCur) && isFinite(dur) && dur > 0) {
-                pct = (adjustedCur / dur) * 100;
-            }
+
+            var pct = (isFinite(cur) && isFinite(dur) && dur > 0) ? (cur / dur) * 100 : 0;
+            // Pin to 100% when live and near the live edge
             if (isLive && shouldPinToLiveEdgeUI(cur, dur)) {
                 pct = 100;
             }
             pct = Math.min(100, Math.max(0, pct));
-
-            // If a live stream drifts too far from the edge and the user did not manually seek back,
-            // softly catch up in the background without the aggressive retry loop.
-            if (isLive && preferLiveEdge() && !userSeeked && isFinite(cur) && isFinite(dur) && dur > 0 && (dur - cur) > 20) {
-                syncToLiveEdge(false);
-            }
 
             var loaded = (p.getVideoLoadedFraction() || 0) * 100;
             loaded = Math.min(100, Math.max(0, isFinite(loaded) ? loaded : 0));
@@ -443,25 +413,23 @@ var csPlayer = {
         function commitSeek() {
             var state = csPlayer.csPlayers[videoTag];
             var slider = root.querySelector('.csPlayer-prog-wrap input');
-            var dur = state.videoTag.getDuration();
+            var dur = Number(state.videoTag.getDuration());
             var pct = Number(slider.value);
             if (isFinite(dur) && dur > 0) {
                 var targetSec = (pct / 100) * dur;
-                if (state.isLive) {
-                    targetSec = Math.max(0, targetSec - getLiveEdgeOffsetSec());
-                }
-                if (state.isLive && (dur - (targetSec + getLiveEdgeOffsetSec())) <= 2) {
+                // Snap to live edge if seeking within 8 s of the edge
+                if (state.isLive && (dur - targetSec) <= 8) {
+                    targetSec = dur;
                     userSeeked = false;
                     state.lastLiveEdgeSyncAt = Date.now();
                     state.hasAppliedInitialLiveEdge = true;
-                    scheduleLiveEdgeCalibration(1200);
                 } else {
                     markSeeked();
                 }
                 state.videoTag.seekTo(targetSec, true);
             }
             resetControlsTO();
-            // Block auto-update from snapping slider back while YouTube buffers
+            // Block slider from snapping back while YouTube buffers
             state._seekSettling = true;
             clearTimeout(state._seekSettleTO);
             state._seekSettleTO = setTimeout(() => {
@@ -815,9 +783,9 @@ var csPlayer = {
                                     // Live badge click → jump to live edge
                                     root.querySelector('.csPlayer-live-badge').addEventListener('click', goToLive);
 
-                                    // Intervals (500 ms for smooth updates)
-                                    csPlayer.csPlayers[videoTag].TextTimeInterval = setInterval(updateTextTime, 500);
-                                    csPlayer.csPlayers[videoTag].TimeSliderInterval = setInterval(updateTimeSlider, 500);
+                                    // 250 ms intervals for accurate live time display
+                                    csPlayer.csPlayers[videoTag].TextTimeInterval = setInterval(updateTextTime, 250);
+                                    csPlayer.csPlayers[videoTag].TimeSliderInterval = setInterval(updateTimeSlider, 250);
 
                                     scheduleLiveEdgeSync();
 

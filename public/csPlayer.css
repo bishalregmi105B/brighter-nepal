@@ -331,16 +331,16 @@
   display:     none;
   align-items: center;
   gap:         5px;
-  padding:     2px 7px 2px 5px;
-  border-radius: 3px;
+  padding:     2px 8px 2px 6px;
+  border-radius: 4px;
   background:  var(--liveColor);
   color:       #fff;
-  font-size:   0.7rem;
+  font-size:   0.68rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   cursor:      pointer;
   flex-shrink: 0;
-  transition:  background 0.2s, opacity 0.2s;
+  transition:  background 0.2s, opacity 0.2s, border-color 0.2s;
   user-select: none;
 }
 
@@ -383,6 +383,7 @@
 }
 
 .csPlayer-time-cur { color: var(--currentTimeTextColor); margin-left: 2px; }
+.csPlayer-time-cur.csPlayer-behind-live { color: rgba(255, 155, 50, 0.92); }
 .csPlayer-time-dur { color: var(--durationTextColor); }
 
 /* ─── Progress bar ───────────────────────────────────────── */
