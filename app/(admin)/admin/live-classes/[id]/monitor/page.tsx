@@ -39,6 +39,13 @@ export default function LiveClassMonitorPage() {
     return () => clearInterval(interval)
   }, [params.id])
 
+  // Keep watchers display in sync with live socket presence count
+  useEffect(() => {
+    if (onlineCount > 0) {
+      setCls(prev => prev ? { ...prev, watchers: onlineCount } : prev)
+    }
+  }, [onlineCount])
+
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const sendMsg = () => {

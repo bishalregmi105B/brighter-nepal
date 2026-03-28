@@ -34,10 +34,20 @@ export default function LiveClassRoomPage() {
 
     fetchClass()
 
+    // Register attendance via API so watchers count is persisted
+    liveClassService.joinClass(Number(params.id)).catch(() => {})
+
     // Poll every 20s so 'scheduled' pages auto-switch to the live player
     const interval = setInterval(fetchClass, 20_000)
     return () => clearInterval(interval)
   }, [params.id])
+
+  // Keep cls.watchers in sync with live socket presence count
+  useEffect(() => {
+    if (onlineCount > 0) {
+      setCls(prev => prev ? { ...prev, watchers: onlineCount } : prev)
+    }
+  }, [onlineCount])
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: 'smooth' })
