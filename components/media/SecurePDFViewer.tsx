@@ -1,12 +1,13 @@
 'use client'
 /**
  * SecurePDFViewer — renders a PDF natively using react-pdf.
- *  - No download or print buttons exist in the UI.
- *  - Right-click context-menu blocked on the container to prevent easy saving.
- *  - True security must be enforced by signed/expiring URLs from the backend.
+ *  - All pages rendered in a single scrollable view (no cropping).
+ *  - Page width auto-fits the container via ResizeObserver.
+ *  - Zoom scales relative to the fitted width.
+ *  - No download or print buttons; context-menu blocked.
  */
-import { useState, useEffect, useRef } from 'react'
-import { FileText, Loader2, ShieldCheck, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, AlertCircle, Maximize2, Minimize2 } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { FileText, Loader2, ShieldCheck, ZoomIn, ZoomOut, AlertCircle, Maximize2, Minimize2 } from 'lucide-react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -24,18 +25,36 @@ interface SecurePDFViewerProps {
 }
 
 export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerProps) {
-  const [numPages, setNumPages] = useState<number>(0)
-  const [pageNumber, setPageNumber] = useState<number>(1)
-  const [scale, setScale] = useState<number>(1.0)
-  const [error, setError] = useState<boolean>(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const viewerRef = useRef<HTMLDivElement | null>(null)
+  const [numPages,      setNumPages]      = useState<number>(0)
+  const [scale,         setScale]         = useState<number>(1.0)
+  const [error,         setError]         = useState<boolean>(false)
+  const [containerWidth, setContainerWidth] = useState<number>(0)
+  const [isFullscreen,  setIsFullscreen]  = useState(false)
 
-  // Reset state when url changes
+  const viewerRef    = useRef<HTMLDivElement | null>(null)
+  const contentRef   = useRef<HTMLDivElement | null>(null)
+
+  // Reset when URL changes
   useEffect(() => {
-    setPageNumber(1)
+    setNumPages(0)
     setError(false)
   }, [pdfUrl])
+
+  // Measure container width so pages always fill it (no cropping)
+  const measureWidth = useCallback(() => {
+    if (contentRef.current) {
+      // subtract horizontal padding (32px = px-4 on each side)
+      const w = contentRef.current.getBoundingClientRect().width - 32
+      if (w > 0) setContainerWidth(w)
+    }
+  }, [])
+
+  useEffect(() => {
+    measureWidth()
+    const ro = new ResizeObserver(measureWidth)
+    if (contentRef.current) ro.observe(contentRef.current)
+    return () => ro.disconnect()
+  }, [measureWidth])
 
   useEffect(() => {
     const onFsChange = () => {
@@ -67,6 +86,9 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
     } catch {}
   }
 
+  // Page render width = container width × zoom scale, capped so it doesn't shrink below 300px
+  const pageWidth = containerWidth > 0 ? Math.max(300, Math.round(containerWidth * scale)) : undefined
+
   return (
     <div
       ref={viewerRef}
@@ -79,35 +101,21 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
           <FileText className="w-4 h-4 text-red-400 shrink-0" />
           <span className="truncate">{title ?? 'Document Preview'}</span>
         </div>
-        
-        <div className="flex flex-1 items-center justify-end gap-4 min-w-[200px]">
-          {/* Pagination */}
-          <div className="flex items-center gap-2 bg-white/5 rounded-lg border border-white/10 p-1">
-            <button
-              onClick={() => setPageNumber(p => Math.max(1, p - 1))}
-              disabled={pageNumber <= 1 || numPages === 0}
-              className="p-1 text-white/70 hover:text-white disabled:opacity-30 disabled:hover:text-white/70 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-white/50 text-xs font-mono font-medium px-2">
-              {numPages ? `${pageNumber} / ${numPages}` : '-- / --'}
+
+        <div className="flex flex-1 items-center justify-end gap-3 min-w-[180px]">
+          {/* Page count */}
+          {numPages > 0 && (
+            <span className="text-white/40 text-xs font-mono hidden sm:inline">
+              {numPages} page{numPages !== 1 ? 's' : ''}
             </span>
-            <button
-              onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
-              disabled={pageNumber >= numPages || numPages === 0}
-              className="p-1 text-white/70 hover:text-white disabled:opacity-30 disabled:hover:text-white/70 transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          )}
 
           <div className="w-px h-5 bg-white/10" />
 
           {/* Zoom controls */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setScale((z) => Math.max(0.5, z - 0.25))}
+              onClick={() => setScale(z => Math.max(0.5, parseFloat((z - 0.25).toFixed(2))))}
               className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
               title="Zoom out"
             >
@@ -115,7 +123,7 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
             </button>
             <span className="text-white/40 text-xs w-12 text-center font-mono">{Math.round(scale * 100)}%</span>
             <button
-              onClick={() => setScale((z) => Math.min(3.0, z + 0.25))}
+              onClick={() => setScale(z => Math.min(3.0, parseFloat((z + 0.25).toFixed(2))))}
               className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
               title="Zoom in"
             >
@@ -132,21 +140,24 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
           </button>
 
           {/* Security badge */}
-          <div className="hidden sm:flex items-center gap-1 bg-white/5 text-white/40 text-[10px] font-bold px-2.5 py-1.5 rounded-full ml-2">
+          <div className="hidden sm:flex items-center gap-1 bg-white/5 text-white/40 text-[10px] font-bold px-2.5 py-1.5 rounded-full ml-1">
             <ShieldCheck className="w-3 h-3 text-green-400" />
             Secure
           </div>
         </div>
       </div>
 
-      {/* PDF content area */}
-      <div className="relative flex-1 bg-[#1a1a1a] overflow-auto flex justify-center py-6" style={{ minHeight: '600px', maxHeight: '80vh' }}>
-        
+      {/* PDF content area — scrolls through ALL pages, no cropping */}
+      <div
+        ref={contentRef}
+        className="relative flex-1 bg-[#2a2a2a] overflow-auto px-4 py-6"
+        style={{ minHeight: '70vh' }}
+      >
         {/* Error state */}
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1a1a] text-white/40 gap-3 p-8 text-center z-10">
             <AlertCircle className="w-10 h-10 text-error opacity-80" />
-            <p className="text-sm">Unable to preview this document. The file might not be publicly accessible or the URL is invalid.</p>
+            <p className="text-sm">Unable to preview this document. The file may not be publicly accessible or the URL is invalid.</p>
           </div>
         )}
 
@@ -155,26 +166,26 @@ export function SecurePDFViewer({ pdfUrl, title, className }: SecurePDFViewerPro
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
           loading={
-            <div className="flex flex-col items-center justify-center text-white/40 gap-3 mt-20">
+            <div className="flex flex-col items-center justify-center text-white/40 gap-3 py-20">
               <Loader2 className="w-8 h-8 animate-spin text-on-primary-container" />
-              <p className="text-sm">Loading document...</p>
+              <p className="text-sm">Loading document…</p>
             </div>
           }
-          className="flex flex-col items-center shadow-2xl"
+          className="flex flex-col items-center gap-4"
         >
-          {numPages > 0 && !error && (
-            <div className="border border-white/10 bg-white">
+          {numPages > 0 && !error && Array.from({ length: numPages }, (_, i) => i + 1).map(pageNum => (
+            <div key={pageNum} className="shadow-2xl bg-white rounded-sm overflow-hidden">
               <Page
-                pageNumber={pageNumber}
-                scale={scale * 1.2} // Base scale to look sharp
+                pageNumber={pageNum}
+                width={pageWidth}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
               />
             </div>
-          )}
+          ))}
         </Document>
 
-        {/* Invisible protection overlay — blocks right-click and drag-to-download on the canvas */}
+        {/* Invisible protection overlay */}
         <div
           className="absolute inset-0 z-20 pointer-events-none"
           style={{ background: 'transparent' }}

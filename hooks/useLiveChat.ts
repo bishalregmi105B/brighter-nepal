@@ -28,6 +28,12 @@ export interface TypingUser {
   name: string
 }
 
+export interface RoomUser {
+  user_id: number
+  name: string
+  is_admin: boolean
+}
+
 const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_URL ?? 'http://localhost:5001'
 
 const DEBUG = true
@@ -39,6 +45,10 @@ export function useLiveChat(classId: number | null) {
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
   const [connected,   setConnected]   = useState(false)
+  const [userList,    setUserList]    = useState<RoomUser[]>([])
+  const [mutedUsers,  setMutedUsers]  = useState<Set<number>>(new Set())
+  const [rateLimited, setRateLimited] = useState(false)
+  const rateLimitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const socketRef   = useRef<Socket | null>(null)
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -80,8 +90,13 @@ export function useLiveChat(classId: number | null) {
       setConnected(false)
     })
 
-    socket.on('error', (data: { msg: string }) => {
+    socket.on('error', (data: { msg: string; code?: string }) => {
       warn('⚠️ server error event:', data.msg)
+      if (data.code === 'rate_limited') {
+        setRateLimited(true)
+        if (rateLimitTimer.current) clearTimeout(rateLimitTimer.current)
+        rateLimitTimer.current = setTimeout(() => setRateLimited(false), 5000)
+      }
     })
 
     socket.on('history', (history: LiveChatMessage[]) => {
@@ -118,6 +133,28 @@ export function useLiveChat(classId: number | null) {
       if (data.room === room) setOnlineCount(data.online_count)
     })
 
+    // ── Participants & mute ───────────────────────────────────────────────────
+    socket.on('user_list', (data: { users: RoomUser[]; muted_user_ids: number[] }) => {
+      log('👤 user_list:', data)
+      setUserList(data.users ?? [])
+      setMutedUsers(new Set(data.muted_user_ids ?? []))
+    })
+
+    socket.on('muted_list', (mutedIds: number[]) => {
+      log('🔇 muted_list:', mutedIds)
+      setMutedUsers(new Set(mutedIds ?? []))
+    })
+
+    socket.on('user_muted', (data: { user_id: number; muted: boolean }) => {
+      log('🔇 user_muted:', data)
+      setMutedUsers(prev => {
+        const next = new Set(prev)
+        if (data.muted) next.add(data.user_id)
+        else next.delete(data.user_id)
+        return next
+      })
+    })
+
     // ── Catch-all for debugging ───────────────────────────────────────────────
     socket.onAny((event, ...args) => {
       log('📡 [ANY]', event, args)
@@ -125,6 +162,7 @@ export function useLiveChat(classId: number | null) {
 
     return () => {
       log('🧹 cleanup — leaving room:', room)
+      if (rateLimitTimer.current) clearTimeout(rateLimitTimer.current)
       socket.emit('leave', { room })
       socket.disconnect()
       socketRef.current = null
@@ -173,5 +211,11 @@ export function useLiveChat(classId: number | null) {
     }
   }, [classId])
 
-  return { messages, sendMessage, setTyping, typingUsers, onlineCount, connected }
+  // ── Admin mute/unmute ─────────────────────────────────────────────────────
+  const adminMute = useCallback((userId: number, muted: boolean) => {
+    if (!classId || !socketRef.current) return
+    socketRef.current.emit('admin_mute', { room: `live:${classId}`, user_id: userId, muted })
+  }, [classId])
+
+  return { messages, sendMessage, setTyping, typingUsers, onlineCount, connected, userList, mutedUsers, adminMute, rateLimited }
 }

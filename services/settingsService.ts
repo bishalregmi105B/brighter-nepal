@@ -7,6 +7,11 @@ export interface GoogleFormsSettings {
   configured: boolean
 }
 
+export interface ChatSettings {
+  chat_rate_limit_count: number
+  chat_rate_limit_window_secs: number
+}
+
 export const settingsService = {
   getGoogleFormsSettings: () =>
     api.get<{ data: GoogleFormsSettings }>('/api/settings/google-forms'),
@@ -14,4 +19,9 @@ export const settingsService = {
     api.patch<{ data: GoogleFormsSettings }>('/api/settings/google-forms', payload),
   getGoogleFormsOAuthUrl: () =>
     api.get<{ data: { auth_url: string; redirect_uri: string } }>('/api/settings/google-forms/oauth/url'),
+
+  getChatSettings: () =>
+    api.get<{ data: ChatSettings }>('/api/settings/chat'),
+  updateChatSettings: (payload: Partial<ChatSettings>) =>
+    api.patch<{ data: ChatSettings }>('/api/settings/chat', payload),
 }

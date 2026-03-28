@@ -31,7 +31,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   return (
     <AuthGuard requiredRole="student">
-      <div className="flex min-h-screen bg-surface">
+      <div className="flex h-screen bg-surface overflow-hidden">
         {/* Sidebar — desktop/tablet/mobile handling is inside the component */}
         <StudentSidebar />
 

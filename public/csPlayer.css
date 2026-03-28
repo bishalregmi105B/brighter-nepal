@@ -101,16 +101,17 @@
 }
 
 .csPlayer .csPlayer-container iframe {
-  /* Oversized to hide YouTube UI chrome */
-  width:      2400%;
-  max-width:  none !important;
-  height:     100%;
-  margin-left: -1149.95%;
-  border:     none;
-  outline:    none;
-  position:   absolute;
-  top:        0;
-  left:       0;
+  /* Moderately oversized to clip YouTube's native title bar, watermark & "More videos" overlay.
+     Container overflow:hidden crops the edges while keeping the video centred.
+     pointer-events:none prevents hover-triggered YouTube UI. */
+  width:          300%;
+  height:         130%;
+  top:            -15%;
+  left:           -100%;
+  border:         none;
+  outline:        none;
+  position:       absolute;
+  pointer-events: none;
 }
 
 /* ─── Thumbnail / loading overlay ───────────────────────── */
@@ -127,7 +128,7 @@
   display:             flex;
   align-items:         center;
   justify-content:     center;
-  pointer-events:      none;
+  pointer-events:      auto;
 }
 
 .csPlayer .csPlayer-container span i {
@@ -383,7 +384,6 @@
 }
 
 .csPlayer-time-cur { color: var(--currentTimeTextColor); margin-left: 2px; }
-.csPlayer-time-cur.csPlayer-behind-live { color: rgba(255, 155, 50, 0.92); }
 .csPlayer-time-dur { color: var(--durationTextColor); }
 
 /* ─── Progress bar ───────────────────────────────────────── */

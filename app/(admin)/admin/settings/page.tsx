@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle2, Eye, EyeOff, Loader2, Save, ShieldAlert } from 'lucide-react'
-import { settingsService } from '@/services/settingsService'
+import { CheckCircle2, Eye, EyeOff, Loader2, MessageSquare, Save, ShieldAlert } from 'lucide-react'
+import { settingsService, type ChatSettings } from '@/services/settingsService'
 
 type SettingsForm = {
   client_id: string
@@ -29,6 +29,13 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState('')
   const [configured, setConfigured] = useState(false)
 
+  // Chat rate-limit settings
+  const [chatSettings, setChatSettings] = useState<ChatSettings>({ chat_rate_limit_count: 20, chat_rate_limit_window_secs: 60 })
+  const [chatLoading, setChatLoading]   = useState(true)
+  const [chatSaving,  setChatSaving]    = useState(false)
+  const [chatMessage, setChatMessage]   = useState('')
+  const [chatError,   setChatError]     = useState('')
+
   const setField = (key: keyof SettingsForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
@@ -48,6 +55,11 @@ export default function AdminSettingsPage() {
         setError('Failed to load Google Forms settings.')
       })
       .finally(() => setLoading(false))
+
+    settingsService.getChatSettings()
+      .then((res) => setChatSettings(res.data))
+      .catch(() => {})
+      .finally(() => setChatLoading(false))
   }, [])
 
   useEffect(() => {
@@ -117,6 +129,21 @@ export default function AdminSettingsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start Google authentication.')
       setAuthenticating(false)
+    }
+  }
+
+  async function saveChatSettings() {
+    setChatSaving(true)
+    setChatError('')
+    setChatMessage('')
+    try {
+      const res = await settingsService.updateChatSettings(chatSettings)
+      setChatSettings(res.data)
+      setChatMessage('Chat settings saved.')
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : 'Failed to save.')
+    } finally {
+      setChatSaving(false)
     }
   }
 
@@ -230,6 +257,76 @@ export default function AdminSettingsPage() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Live Chat Settings ────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl shadow-[0_12px_32px_rgba(25,28,30,0.06)] border border-slate-100 p-5 md:p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <MessageSquare className="w-5 h-5 text-[#c0622f]" />
+          <div>
+            <h2 className="text-lg font-headline font-black text-[#1a1a4e]">Live Chat Rate Limit</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Limit how many messages a student can send per time window. Set count to 0 to disable rate limiting.</p>
+          </div>
+        </div>
+
+        {chatLoading ? (
+          <div className="h-20 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-[#1a1a4e]" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-500 mb-1.5">Max Messages</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000}
+                  value={chatSettings.chat_rate_limit_count}
+                  onChange={(e) => setChatSettings(s => ({ ...s, chat_rate_limit_count: Math.max(0, Number(e.target.value)) }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/20"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">0 = unlimited</p>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-500 mb-1.5">Per Window (seconds)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={3600}
+                  value={chatSettings.chat_rate_limit_window_secs}
+                  onChange={(e) => setChatSettings(s => ({ ...s, chat_rate_limit_window_secs: Math.max(1, Number(e.target.value)) }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/20"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">e.g. 60 = per minute</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+              Current limit: <strong>{chatSettings.chat_rate_limit_count > 0 ? `${chatSettings.chat_rate_limit_count} messages every ${chatSettings.chat_rate_limit_window_secs}s` : 'Unlimited'}</strong> — Admins are always exempt.
+            </p>
+
+            {chatError && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                <ShieldAlert className="w-4 h-4" /> {chatError}
+              </div>
+            )}
+            {chatMessage && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                <CheckCircle2 className="w-4 h-4" /> {chatMessage}
+              </div>
+            )}
+
+            <button
+              onClick={saveChatSettings}
+              disabled={chatSaving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1a1a4e] text-white text-sm font-bold hover:bg-[#141432] disabled:opacity-70"
+            >
+              {chatSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {chatSaving ? 'Saving...' : 'Save Chat Settings'}
+            </button>
           </div>
         )}
       </div>

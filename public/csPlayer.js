@@ -306,10 +306,8 @@ var csPlayer = {
             return isFinite(rawCur) && rawCur >= 0 ? rawCur : 0;
         }
 
-        function shouldPinToLiveEdgeUI(cur, dur) {
-            if (userSeeked) return false;
-            if (!isFinite(cur) || !isFinite(dur) || dur <= 0) return false;
-            return (dur - cur) <= 15;
+        function shouldPinToLiveEdgeUI() {
+            return !userSeeked;
         }
 
         // ── live badge ───────────────────────────────────────
@@ -349,19 +347,15 @@ var csPlayer = {
 
             if (isLive) {
                 durEl.style.display = 'none';
-                var behindSec = (dur > 0) ? Math.max(0, dur - cur) : 0;
-                var atEdge = behindSec <= 12;
-                if (badge) {
-                    if (atEdge) badge.classList.add('csPlayer-at-edge');
-                    else badge.classList.remove('csPlayer-at-edge');
-                }
-                if (atEdge) {
+                if (!userSeeked) {
+                    // At live edge: only show solid LIVE badge, no time text
                     curEl.style.display = 'none';
-                    curEl.classList.remove('csPlayer-behind-live');
+                    if (badge) badge.classList.add('csPlayer-at-edge');
                 } else {
+                    // User scrubbed back: show actual DVR playback position
                     curEl.style.display = 'block';
-                    curEl.classList.add('csPlayer-behind-live');
-                    curEl.textContent = '\u2212\u00a0' + formatTime(behindSec);
+                    curEl.textContent = formatTime(cur);
+                    if (badge) badge.classList.remove('csPlayer-at-edge');
                 }
             } else {
                 curEl.style.display = durEl.style.display = 'block';
@@ -385,8 +379,8 @@ var csPlayer = {
             var isLive = csPlayer.csPlayers[videoTag].isLive;
 
             var pct = (isFinite(cur) && isFinite(dur) && dur > 0) ? (cur / dur) * 100 : 0;
-            // Pin to 100% when live and near the live edge
-            if (isLive && shouldPinToLiveEdgeUI(cur, dur)) {
+            // Live and not manually scrubbed → always pin to right edge
+            if (isLive && shouldPinToLiveEdgeUI()) {
                 pct = 100;
             }
             pct = Math.min(100, Math.max(0, pct));
@@ -662,7 +656,6 @@ var csPlayer = {
 
                 root.querySelector('.csPlayer-container span i').classList.add('csPlayer-loading');
                 root.querySelector('.csPlayer-container span').style.display = 'none';
-                root.querySelector('.csPlayer-container').style.pointerEvents = 'none';
                 controlsBox.style.display = 'flex';
                 resetControlsTO();
 
@@ -706,8 +699,7 @@ var csPlayer = {
                 }
             }
 
-            // Always suppress captions
-            try { st.videoTag.unloadModule('captions'); st.videoTag.unloadModule('cc'); } catch (_) { }
+            // Captions suppressed at init via cc_load_policy: 3 in playerVars
         }
 
         // ── Player init ───────────────────────────────────────
@@ -743,7 +735,6 @@ var csPlayer = {
 
                                     // Mobile overlay click
                                     var overlay = root.querySelector('.csPlayer-container span');
-                                    overlay.style.pointerEvents = 'auto';
                                     overlay.style.cursor = 'pointer';
                                     overlay.addEventListener('click', () => {
                                         csPlayer.csPlayers[videoTag].videoTag.playVideo();

@@ -2,7 +2,7 @@
 // Admin Live Class Monitor — real-time chat + live stream monitoring
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Users, MessageSquare, Send, StopCircle, Mic, MicOff, Video, VideoOff, Loader2, Wifi, WifiOff } from 'lucide-react'
+import { ArrowLeft, Users, MessageSquare, Send, StopCircle, Mic, MicOff, Video, VideoOff, Loader2, Wifi, WifiOff, VolumeX, Volume2 } from 'lucide-react'
 import Link from 'next/link'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
 import { useLiveChat } from '@/hooks/useLiveChat'
@@ -18,11 +18,11 @@ export default function LiveClassMonitorPage() {
   const [msgInput,  setMsgInput] = useState('')
   const [micOn,     setMicOn]    = useState(true)
   const [camOn,     setCamOn]    = useState(true)
-  const [activeTab, setActiveTab] = useState<'chat' | 'qa'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'qa' | 'viewers'>('chat')
   const messagesEnd = useRef<HTMLDivElement>(null)
 
   const classId = cls?.id ?? null
-  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected } = useLiveChat(classId)
+  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected, userList, mutedUsers, adminMute } = useLiveChat(classId)
 
   useEffect(() => {
     if (!params.id) return
@@ -128,8 +128,11 @@ export default function LiveClassMonitorPage() {
             <button onClick={() => setActiveTab('chat')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'chat' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
               <MessageSquare className="w-4 h-4" /> Chat ({messages.length})
             </button>
+            <button onClick={() => setActiveTab('viewers')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'viewers' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
+              <Users className="w-4 h-4" /> Viewers ({userList.filter(u => !u.is_admin).length})
+            </button>
             <button onClick={() => setActiveTab('qa')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'qa' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
-              <MessageSquare className="w-4 h-4" /> Q&amp;A
+              Q&amp;A
             </button>
             <div className="flex items-center px-3">
               {connected
@@ -138,7 +141,43 @@ export default function LiveClassMonitorPage() {
             </div>
           </div>
 
+          {/* Participants tab */}
+          {activeTab === 'viewers' && (
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {userList.filter(u => !u.is_admin).length === 0 ? (
+                <p className="text-center text-slate-400 text-xs py-8">No viewers yet</p>
+              ) : userList.filter(u => !u.is_admin).map(u => {
+                const isMuted = mutedUsers.has(u.user_id)
+                return (
+                  <div key={u.user_id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-[#1a1a4e] flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                        {(u.name?.[0] ?? '?').toUpperCase()}
+                      </div>
+                      <span className="text-xs font-semibold text-[#1a1a4e] truncate">{u.name}</span>
+                      {isMuted && <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full flex-shrink-0">Muted</span>}
+                    </div>
+                    <button
+                      onClick={() => adminMute(u.user_id, !isMuted)}
+                      title={isMuted ? 'Unmute' : 'Mute'}
+                      className={cn(
+                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors flex-shrink-0',
+                        isMuted
+                          ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                          : 'bg-red-50 text-red-600 hover:bg-red-100'
+                      )}
+                    >
+                      {isMuted ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                      {isMuted ? 'Unmute' : 'Mute'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto p-4">
+            {activeTab !== 'chat' && activeTab !== 'qa' ? null : (
             <div className="space-y-4">
               {messages.length === 0 && <p className="text-center text-outline text-xs py-6">No messages yet. Be first to chat!</p>}
               {messages.map((msg) => {
@@ -169,6 +208,7 @@ export default function LiveClassMonitorPage() {
               )}
               <div ref={messagesEnd} />
             </div>
+            )}
           </div>
 
           <div className="border-t border-surface-container px-3 pt-3 pb-5 md:px-4 md:pb-6 flex-shrink-0">

@@ -2,7 +2,7 @@
 // Student Live Class Room — real-time chat via SocketIO
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Users, MessageSquare, Send, Loader2, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
+import { Users, MessageSquare, Send, Loader2, ArrowLeft, Wifi, WifiOff, VolumeX } from 'lucide-react'
 import { liveClassService, type LiveClass } from '@/services/liveClassService'
 import { useLiveChat }  from '@/hooks/useLiveChat'
 import { authService, type AuthUser }  from '@/services/authService'
@@ -20,7 +20,9 @@ export default function LiveClassRoomPage() {
   const messagesEnd = useRef<HTMLDivElement>(null)
 
   const classId = cls?.id ?? null
-  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected } = useLiveChat(classId)
+  const { messages, sendMessage, setTyping, typingUsers, onlineCount, connected, mutedUsers, rateLimited } = useLiveChat(classId)
+
+  const isMuted = user ? mutedUsers.has(user.id) : false
 
   useEffect(() => {
     if (!params.id) return
@@ -238,19 +240,31 @@ export default function LiveClassRoomPage() {
         </div>
 
         <div className="border-t border-surface-container bg-surface-container-low px-3 pt-3 pb-5 md:px-4 md:pb-6 flex-shrink-0">
+          {/* Muted / rate-limited banners */}
+          {isMuted && (
+            <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <VolumeX className="w-3.5 h-3.5 flex-shrink-0" />
+              You have been muted by the host.
+            </div>
+          )}
+          {rateLimited && !isMuted && (
+            <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Slow down — rate limit reached. Please wait a moment.
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               value={input}
               onChange={handleInputChange}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               onBlur={() => setTyping(false)}
-              placeholder={connected ? 'Type a message…' : 'Reconnecting…'}
-              disabled={!connected}
+              placeholder={isMuted ? 'You are muted' : connected ? 'Type a message…' : 'Reconnecting…'}
+              disabled={!connected || isMuted || rateLimited}
               className="flex-1 text-xs bg-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-on-primary-container/20 disabled:opacity-50"
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || !connected}
+              disabled={!input.trim() || !connected || isMuted || rateLimited}
               className="w-8 h-8 rounded-lg bg-on-primary-container text-white flex items-center justify-center hover:opacity-90 disabled:opacity-40">
               <Send className="w-3 h-3" />
             </button>
