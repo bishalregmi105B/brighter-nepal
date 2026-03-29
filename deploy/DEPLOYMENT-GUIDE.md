@@ -325,6 +325,71 @@ Click the lock icon in browser → the certificate should say **Cloudflare Inc**
 
 ## PART 8: Troubleshooting
 
+### Diagnose failing services (run these first)
+
+```bash
+# See exact error for bn-api
+journalctl -u bn-api --no-pager -n 50
+
+# See exact error for bn-frontend
+journalctl -u bn-frontend --no-pager -n 50
+
+# Check standalone build exists
+ls /opt/brighternepal/brighter-nepal/.next/standalone/
+
+# Check .env file exists and has correct values (hides secrets)
+cat /opt/brighternepal/.env | grep -v KEY | grep -v SECRET | grep -v PASS
+```
+
+#### Fix bn-frontend — missing standalone build
+
+```bash
+cd /opt/brighternepal/brighter-nepal
+npm install
+NEXT_PUBLIC_API_URL=https://api.brighternepal.com \
+NEXT_PUBLIC_CHAT_URL=https://chat.brighternepal.com \
+npm run build
+cp -r .next/static .next/standalone/.next/static
+cp -r public .next/standalone/public
+chown -R brighternepal:brighternepal /opt/brighternepal
+systemctl restart bn-frontend
+```
+
+#### Fix bn-api — wrong DATABASE_URI or missing .env
+
+```bash
+# Edit the env file and set correct values
+nano /opt/brighternepal/.env
+
+# After editing, restart
+systemctl restart bn-api
+journalctl -u bn-api --no-pager -n 20
+```
+
+#### Fix .env — if the file doesn't exist yet
+
+```bash
+# Copy from template
+cp /opt/brighternepal/brighter-nepal/deploy/.env.production /opt/brighternepal/.env
+chmod 600 /opt/brighternepal/.env
+
+# Generate secrets
+echo "SECRET_KEY: $(openssl rand -hex 32)"
+echo "JWT_SECRET_KEY: $(openssl rand -hex 32)"
+echo "URL_CIPHER_KEY: $(openssl rand -hex 8)"
+DB_PASS=$(openssl rand -base64 24 | tr -d '=/+' | head -c 32)
+echo "DB_PASSWORD: $DB_PASS"
+
+# Set DB password in postgres
+sudo -u postgres psql -c "ALTER USER brighternepal PASSWORD '$DB_PASS';"
+
+# Fill in the .env
+nano /opt/brighternepal/.env
+
+# Restart both services
+systemctl restart bn-api bn-frontend
+```
+
 ### If a service won't start
 
 ```bash

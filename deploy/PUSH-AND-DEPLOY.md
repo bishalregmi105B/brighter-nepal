@@ -3,69 +3,78 @@
 ## How It Works
 
 ```
-Your PC                     GitHub                      VPS Server
-(local code)                (cloud)                     (163.47.151.249)
-    │                          │                            │
-    │  git push ──────────►    │                            │
-    │                          │                            │
-    │                          │    ◄────── git pull        │
-    │                          │       (redeploy.sh does    │
-    │                          │        this automatically) │
+Your PC  ──git push──►  GitHub  ──git pull──►  VPS Server
 ```
 
-**You do NOT manually upload files to the server.**
-
-1. You `git push` your code to GitHub (from your local PC)
-2. The `redeploy.sh` script runs `git pull` on the VPS to download the latest code from GitHub
-3. Then it installs dependencies, rebuilds, and restarts the service
-
-That's why you only need two steps: **push** then **redeploy**.
+- You push code to GitHub from your local PC
+- The VPS pulls from GitHub — you never upload files manually
+- `redeploy.sh` handles git pull + install + build + restart automatically
 
 ---
 
-## Step 1: Push Code to GitHub (from your local PC)
+## FIRST TIME ONLY — One-time setup sequence
 
-### Push Frontend
+### 1. Push this deploy folder to GitHub (local PC)
 ```bash
 cd "/home/bishal-regmi/Desktop/Company Works/BrighterNepal/brighter-nepal"
-git add -A
-git commit -m "your commit message"
+git add deploy/
+git commit -m "add deploy configs"
 git push
 ```
 
-### Push API (only if you changed API code)
+> Do this BEFORE anything on the VPS — the VPS needs to clone this from GitHub.
+
+### 2. SSH into VPS and re-clone all repos fresh
 ```bash
-cd "/home/bishal-regmi/Desktop/Company Works/BrighterNepal/brighter-nepal-api"
-git add -A
-git commit -m "your commit message"
-git push
+ssh root@163.47.151.249
 ```
 
-### Push Chat (only if you changed chat code)
 ```bash
-cd "/home/bishal-regmi/Desktop/Company Works/BrighterNepal/brighter-nepal-chat"
-git add -A
-git commit -m "your commit message"
-git push
+# Remove old copies (uploaded via rsync, no .git inside)
+rm -rf /opt/brighternepal/brighter-nepal
+rm -rf /opt/brighternepal/brighter-nepal-api
+rm -rf /opt/brighternepal/brighter-nepal-chat
+
+# Clone fresh from GitHub
+git clone https://github.com/bishalregmi105B/brighter-nepal.git /opt/brighternepal/brighter-nepal
+git clone https://github.com/bishalregmi105B/brighter-nepal-api.git /opt/brighternepal/brighter-nepal-api
+git clone https://github.com/bishalregmi105B/brighter-nepal-chat.git /opt/brighternepal/brighter-nepal-chat
 ```
+
+### 3. Run the full setup script
+```bash
+bash /opt/brighternepal/brighter-nepal/deploy/setup-server.sh
+```
+
+This installs everything: Nginx, PostgreSQL, Redis, Node.js, Python venvs, builds Next.js, sets up systemd services, configures firewall.
 
 ---
 
-## Step 2: Redeploy on VPS
+## EVERY TIME — Normal update workflow
 
-### Option A: SSH in, then run redeploy
+### Step 1: Push your changes to GitHub (local PC)
+
 ```bash
-ssh root@163.47.151.249
-bash /opt/brighternepal/brighter-nepal/deploy/redeploy.sh all
+# Frontend
+cd "/home/bishal-regmi/Desktop/Company Works/BrighterNepal/brighter-nepal"
+git add -A && git commit -m "your message" && git push
+
+# API (only if you changed API code)
+cd "/home/bishal-regmi/Desktop/Company Works/BrighterNepal/brighter-nepal-api"
+git add -A && git commit -m "your message" && git push
+
+# Chat (only if you changed chat code)
+cd "/home/bishal-regmi/Desktop/Company Works/BrighterNepal/brighter-nepal-chat"
+git add -A && git commit -m "your message" && git push
 ```
 
-### Option B: One-liner from your local PC (no need to SSH separately)
+### Step 2: Redeploy on VPS
+
 ```bash
+# Deploy all services
 ssh root@163.47.151.249 "bash /opt/brighternepal/brighter-nepal/deploy/redeploy.sh all"
-```
 
-### Redeploy only what you changed
-```bash
+# Or deploy only what changed
 ssh root@163.47.151.249 "bash /opt/brighternepal/brighter-nepal/deploy/redeploy.sh frontend"
 ssh root@163.47.151.249 "bash /opt/brighternepal/brighter-nepal/deploy/redeploy.sh api"
 ssh root@163.47.151.249 "bash /opt/brighternepal/brighter-nepal/deploy/redeploy.sh chat"

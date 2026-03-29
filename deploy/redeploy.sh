@@ -38,6 +38,7 @@ redeploy_frontend() {
     npm run build
     # Copy static assets into standalone output
     if [ -d ".next/standalone" ]; then
+        mkdir -p .next/standalone/.next
         cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
         cp -r public .next/standalone/public 2>/dev/null || true
     fi
