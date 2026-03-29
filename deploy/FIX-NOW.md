@@ -1,21 +1,39 @@
 # Fix bn-frontend and bn-api
 
-## Problem 1: bn-frontend — server.js not found
+## Problem 1: bn-frontend — standalone/server.js not generated
 
-The Next.js build was never run after fresh clone. Run the build now:
+Root cause: `next.config.mjs` (empty file) was overriding `next.config.ts` and blocking `output: 'standalone'`.
+
+### Run this on the VPS:
 
 ```bash
+# Fix git ownership error
+git config --global --add safe.directory /opt/brighternepal/brighter-nepal
+git config --global --add safe.directory /opt/brighternepal/brighter-nepal-api
+git config --global --add safe.directory /opt/brighternepal/brighter-nepal-chat
+
 cd /opt/brighternepal/brighter-nepal
-npm install
-NEXT_PUBLIC_API_URL=https://api.brighternepal.com NEXT_PUBLIC_CHAT_URL=https://chat.brighternepal.com npm run build
+
+# Delete the conflicting config file
+rm -f next.config.mjs
+
+# Pull latest code (which also removes it cleanly)
+git pull
+
+# Rebuild — this time standalone/ will be generated
+npm run build
+
+# Copy static assets into standalone
 mkdir -p .next/standalone/.next
 cp -r .next/static .next/standalone/.next/static
 cp -r public .next/standalone/public
+
+# Fix ownership and restart
 chown -R brighternepal:brighternepal /opt/brighternepal
 systemctl restart bn-frontend
 ```
 
-Check it worked:
+### Verify:
 
 ```bash
 systemctl status bn-frontend --no-pager
@@ -61,7 +79,7 @@ systemctl restart bn-api
 journalctl -u bn-api --no-pager -n 20
 ```
 
-Check it worked:
+### Verify:
 
 ```bash
 systemctl status bn-api --no-pager
@@ -71,10 +89,10 @@ curl -s http://127.0.0.1:5000/api/health
 
 ---
 
-## Verify all services after fixing
+## Final check — all 4 services running
 
 ```bash
 systemctl status bn-api bn-chat bn-frontend nginx --no-pager
 ```
 
-All 4 should show **active (running)**.
+All 4 should show **active (running)** in green.
