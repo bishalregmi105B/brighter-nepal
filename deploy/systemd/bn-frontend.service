@@ -1,0 +1,26 @@
+[Unit]
+Description=BrighterNepal Next.js Frontend
+After=network.target
+
+[Service]
+User=brighternepal
+Group=brighternepal
+WorkingDirectory=/opt/brighternepal/brighter-nepal
+EnvironmentFile=/opt/brighternepal/.env
+# Standalone build: run from .next/standalone with Node directly
+ExecStart=/usr/bin/node /opt/brighternepal/brighter-nepal/.next/standalone/server.js
+Restart=always
+RestartSec=5
+MemoryMax=768M
+OOMScoreAdjust=100
+
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=0.0.0.0
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bn-frontend
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=BrighterNepal Chat Service (Gunicorn + gevent WebSocket)
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+User=brighternepal
+Group=brighternepal
+WorkingDirectory=/opt/brighternepal/brighter-nepal-chat
+EnvironmentFile=/opt/brighternepal/.env
+ExecStart=/opt/brighternepal/brighter-nepal-chat/venv/bin/gunicorn -c gunicorn.conf.py app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=5
+MemoryMax=768M
+OOMScoreAdjust=200
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bn-chat
+
+[Install]
+WantedBy=multi-user.target
