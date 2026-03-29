@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Standalone output — produces a self-contained build that doesn't need
+  // the full node_modules at runtime.  Slashes ~200 MB off the deploy size.
+  output: 'standalone',
+
   // Allow remote images from google auth
   images: {
     remotePatterns: [
@@ -21,6 +25,8 @@ const nextConfig: NextConfig = {
     }
     return config
   },
+  // Enable gzip compression at framework level
+  compress: true,
 }
 
 export default nextConfig
