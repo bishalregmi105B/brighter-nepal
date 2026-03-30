@@ -7,6 +7,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { ShieldCheck, PlayCircle } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { decryptApiUrl } from '@/lib/utils/urlCipher'
 
 // Extend window for csPlayer
 declare global {
@@ -53,7 +54,7 @@ export const SecureVideoPlayer = memo(function SecureVideoPlayer({
   const [playerError,     setPlayerError]     = useState('')
   const currentPlayerIdRef = useRef<string | null>(null)
 
-  const ytId = extractYouTubeId(videoUrl)
+  const ytId = extractYouTubeId(decryptApiUrl(videoUrl))
 
   // Load CSS, YT API, and csPlayer.js
   useEffect(() => {
