@@ -1,14 +1,4 @@
-export const DEFAULT_SUBJECTS = [
-  'Biology',
-  'Chemistry',
-  'English',
-  'General',
-  'GK',
-  'Mathematics',
-  'Physics',
-  'Accountancy',
-  'Economics',
-]
+export const DEFAULT_SUBJECTS: string[] = []
 
 export function mergeSubjectOptions(...groups: Array<Array<string | null | undefined> | undefined>): string[] {
   const mapped = new Map<string, string>()
