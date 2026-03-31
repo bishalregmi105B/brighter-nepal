@@ -102,7 +102,7 @@ function OnboardingModal({ user, onClose }: { user: User; onClose: () => void })
         </div>
 
         <div className="mt-4 bg-slate-50 rounded-xl p-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Target Entrance Exams</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Target Exams</p>
           {exams.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {exams.map(exam => (
@@ -305,7 +305,7 @@ export default function UserManagementPage() {
   }
 
   const statCards = [
-    { label: 'Total Users',     value: stats.total_users,                             badge: 'BridgeCourse', badgeColor: 'text-teal-600 bg-teal-50' },
+    { label: 'Total Users',     value: stats.total_users,                             badge: 'Brighter Nepal', badgeColor: 'text-teal-600 bg-teal-50' },
     { label: 'Paid Users',      value: stats.paid_users,                              badge: 'Paid Tier',    badgeColor: 'text-on-primary-container bg-orange-50' },
     { label: 'Trial Users',     value: stats.trial_users,                             badge: 'Trial Period', badgeColor: 'text-secondary bg-secondary/10' },
     { label: 'Total Payment',   value: `NPR ${stats.total_payment.toLocaleString()}`, badge: 'Revenue',      badgeColor: 'text-green-600 bg-green-50' },
@@ -326,7 +326,7 @@ export default function UserManagementPage() {
       <div className="mb-6 md:mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h2 className="font-headline font-black text-2xl md:text-4xl text-[#1a1a4e] tracking-tight mb-1">User Management</h2>
-          <p className="text-on-surface-variant font-medium text-sm">BridgeCourse Nepal — manage students and their academic tiers.</p>
+          <p className="text-on-surface-variant font-medium text-sm">Brighter Nepal — manage students and their academic tiers.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button

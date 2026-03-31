@@ -171,7 +171,7 @@ export default function AdminLiveClassesPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Live Classes</h2>
-          <p className="text-slate-500 font-medium">BridgeCourse Nepal — schedule, broadcast, and monitor IOE/IOM/CSIT sessions.</p>
+          <p className="text-slate-500 font-medium">Brighter Nepal — schedule, broadcast, and monitor SEE Question Preparation sessions.</p>
         </div>
         <div className="flex flex-wrap gap-3 self-start md:self-auto">
           <button onClick={() => openCreateModal('live')} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">

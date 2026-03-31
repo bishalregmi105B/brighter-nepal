@@ -37,7 +37,7 @@ export default function AdminModelSetsPage() {
       <div className="flex justify-between items-end mb-10">
         <div>
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight mb-2 font-headline">Model Sets Management</h2>
-          <p className="text-slate-500 font-medium">BridgeCourse Nepal — IOE, IOM, and CSIT mock examination sets.</p>
+          <p className="text-slate-500 font-medium">Brighter Nepal — SEE Questions preparation mock examination sets.</p>
         </div>
         <Link href="/admin/model-sets/create" className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
           <Plus className="w-5 h-5" /> Create New Model Set

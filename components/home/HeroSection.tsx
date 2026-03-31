@@ -27,7 +27,7 @@ export function HeroSection() {
           </h1>
 
           <p className="text-slate-300 text-lg leading-relaxed max-w-xl mb-10">
-            Access 2,500+ curated study materials, live classes from Nepal&apos;s top educators, and AI-powered mock tests designed for IOE, CEE, and IOM entrance exams.
+            Access 2,500+ curated study materials, live classes from Nepal&apos;s top educators, and AI-powered mock tests designed for SEE Question Preparation.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">

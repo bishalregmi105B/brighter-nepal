@@ -33,7 +33,7 @@ export default function CreateModelSetPage() {
   useEffect(() => {
     api.get<{ data: string[] }>('/api/model-sets/targets')
       .then(r => { const d = r.data; setAvailableExams(Array.isArray(d) ? d : (d as { data?: string[] })?.data ?? []) })
-      .catch(() => setAvailableExams(['IOE', 'IOM', 'CEE', 'CSIT', 'NEB']))
+      .catch(() => setAvailableExams(['SEE']))
     subjectService.getSubjects()
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : (res.data as { data?: string[] })?.data ?? []
@@ -118,7 +118,7 @@ export default function CreateModelSetPage() {
         </Link>
         <div>
           <h2 className="font-headline font-black text-3xl text-[#1a1a4e]">Create Model Set</h2>
-          <p className="text-slate-500 text-sm font-medium">Build a new mock entrance exam set with only the essential fields up front.</p>
+            <p className="text-slate-500 text-sm font-medium">Build a new mock exam set with only the essential fields up front.</p>
         </div>
       </div>
 
@@ -131,7 +131,7 @@ export default function CreateModelSetPage() {
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. IOE Mock Set 047 — Full Syllabus"
+              placeholder="e.g. SEE Mock Set 047 — Full Syllabus"
               className="w-full px-4 py-3 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm"
             />
           </div>

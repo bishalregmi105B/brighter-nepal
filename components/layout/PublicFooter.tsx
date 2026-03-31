@@ -10,10 +10,7 @@ const footerLinks = {
     { href: '/resources', label: 'Resources' },
   ],
   Exams: [
-    { href: '#', label: 'IOE Entrance' },
-    { href: '#', label: 'CEE Medical' },
-    { href: '#', label: 'IOM Entrance' },
-    { href: '#', label: 'CSIT' },
+    { href: '#', label: 'SEE Question Preparation' },
   ],
   Company: [
     { href: '#', label: 'About Us' },
@@ -39,7 +36,7 @@ export function PublicFooter() {
               </span>
             </div>
             <p className="text-slate-300 text-sm leading-relaxed max-w-xs mb-8">
-              Nepal's premier digital learning platform. Curated resources, model sets, and live classes for entrance exam success.
+              Nepal's premier digital learning platform. Curated resources, model sets, and live classes for SEE Question Preparation.
             </p>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
               Trusted by 10,000+ students across 7 provinces

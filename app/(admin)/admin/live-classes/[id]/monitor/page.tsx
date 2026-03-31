@@ -18,7 +18,7 @@ export default function LiveClassMonitorPage() {
   const [msgInput,  setMsgInput] = useState('')
   const [micOn,     setMicOn]    = useState(true)
   const [camOn,     setCamOn]    = useState(true)
-  const [activeTab, setActiveTab] = useState<'chat' | 'qa' | 'viewers'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'viewers'>('chat')
   const messagesEnd = useRef<HTMLDivElement>(null)
 
   const classId = cls?.id ?? null
@@ -131,9 +131,6 @@ export default function LiveClassMonitorPage() {
             <button onClick={() => setActiveTab('viewers')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'viewers' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
               <Users className="w-4 h-4" /> Viewers ({userList.filter(u => !u.is_admin).length})
             </button>
-            <button onClick={() => setActiveTab('qa')} className={cn('flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold transition-colors', activeTab === 'qa' ? 'text-[#c0622f] border-b-2 border-[#c0622f]' : 'text-slate-400')}>
-              Q&amp;A
-            </button>
             <div className="flex items-center px-3">
               {connected
                 ? <span title="Connected"><Wifi className="w-3.5 h-3.5 text-green-500" /></span>
@@ -177,7 +174,7 @@ export default function LiveClassMonitorPage() {
           )}
 
           <div className="flex-1 overflow-y-auto p-4">
-            {activeTab !== 'chat' && activeTab !== 'qa' ? null : (
+            {activeTab === 'chat' && (
             <div className="space-y-4">
               {messages.length === 0 && <p className="text-center text-outline text-xs py-6">No messages yet. Be first to chat!</p>}
               {messages.map((msg) => {

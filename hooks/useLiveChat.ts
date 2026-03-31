@@ -48,6 +48,7 @@ export function useLiveChat(classId: number | null) {
   const [userList,    setUserList]    = useState<RoomUser[]>([])
   const [mutedUsers,  setMutedUsers]  = useState<Set<number>>(new Set())
   const [rateLimited, setRateLimited] = useState(false)
+  const [blockedWord, setBlockedWord] = useState(false)
   const rateLimitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const socketRef   = useRef<Socket | null>(null)
@@ -96,6 +97,10 @@ export function useLiveChat(classId: number | null) {
         setRateLimited(true)
         if (rateLimitTimer.current) clearTimeout(rateLimitTimer.current)
         rateLimitTimer.current = setTimeout(() => setRateLimited(false), 5000)
+      }
+      if (data.code === 'blocked_word') {
+        setBlockedWord(true)
+        setTimeout(() => setBlockedWord(false), 4000)
       }
     })
 
@@ -217,5 +222,5 @@ export function useLiveChat(classId: number | null) {
     socketRef.current.emit('admin_mute', { room: `live:${classId}`, user_id: userId, muted })
   }, [classId])
 
-  return { messages, sendMessage, setTyping, typingUsers, onlineCount, connected, userList, mutedUsers, adminMute, rateLimited }
+  return { messages, sendMessage, setTyping, typingUsers, onlineCount, connected, userList, mutedUsers, adminMute, rateLimited, blockedWord }
 }

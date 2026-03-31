@@ -65,7 +65,7 @@ export default function StudentDashboardPage() {
               Good morning, {user?.name?.split(' ')[0] ?? 'Scholar'}! 👋
             </h1>
             <p className="text-slate-300 text-base max-w-xl">
-              Welcome back to BridgeCourse Nepal — keep preparing for your St. Xavier's, SOS & +2 Science entrance exams!
+              Welcome back to Brighter Nepal — keep preparing for your SEE Questions preparation!
             </p>
           </div>
           <div className="flex items-center gap-6">
@@ -115,7 +115,7 @@ export default function StudentDashboardPage() {
             <div className="flex items-center gap-2 mb-2">
               <span className="w-2 h-2 rounded-full bg-on-primary-container" />
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                {liveClass?.subject ?? 'Mathematics'} • BridgeCourse Nepal
+                {liveClass?.subject ?? 'Mathematics'} • Brighter Nepal
               </span>
             </div>
             <h3 className="font-headline font-bold text-xl text-[#1a1a4e] mb-1">

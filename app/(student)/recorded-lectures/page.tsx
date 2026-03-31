@@ -96,7 +96,7 @@ export default function RecordedLecturesPage() {
         <span className="text-on-primary-container font-bold text-sm tracking-widest uppercase block mb-2">On-Demand</span>
         <h1 className="font-headline font-extrabold text-4xl md:text-5xl text-[#1a1a4e] leading-tight">Recorded Lectures</h1>
         <p className="text-slate-500 mt-2 max-w-xl">
-          Watch past BridgeCourse Nepal live sessions anytime.{lectures.length > 0 && ` All ${lectures.length} recordings available.`}
+          Watch past Brighter Nepal live sessions anytime.{lectures.length > 0 && ` All ${lectures.length} recordings available.`}
         </p>
       </div>
 

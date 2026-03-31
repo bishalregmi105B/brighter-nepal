@@ -10,6 +10,7 @@ import {
   Video,
   MessageSquare,
   Settings,
+  GraduationCap,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -45,5 +46,6 @@ export const adminNavItems: AdminNavItem[] = [
   { href: '/admin/notices',       label: 'Notices',       icon: Bell },
   { href: '/admin/live-classes',  label: 'Live Classes',  icon: Video },
   { href: '/admin/groups',        label: 'Groups',        icon: MessageSquare },
+  { href: '/admin/subjects',      label: 'Subjects',      icon: GraduationCap },
   { href: '/admin/settings',      label: 'Settings',      icon: Settings },
 ]

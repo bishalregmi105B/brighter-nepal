@@ -54,7 +54,7 @@ export default function AdminNoticesPage() {
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Notices</h2>
-          <p className="text-slate-500 font-medium">BridgeCourse Nepal — publish announcements to all students.</p>
+          <p className="text-slate-500 font-medium">Brighter Nepal — publish announcements to all students.</p>
         </div>
         <button onClick={() => setShowModal(true)} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
           <Plus className="w-5 h-5" /> New Notice
@@ -128,7 +128,7 @@ export default function AdminNoticesPage() {
               <h3 className="font-headline font-bold text-xl text-on-surface">Delete Notice?</h3>
               <button onClick={() => setDeleteId(null)} className="text-outline hover:text-on-surface"><X className="w-5 h-5" /></button>
             </div>
-            <p className="text-sm text-slate-500 mb-8">This notice will be permanently removed from BridgeCourse Nepal and all students will lose access to it.</p>
+            <p className="text-sm text-slate-500 mb-8">This notice will be permanently removed from Brighter Nepal and all students will lose access to it.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteId(null)} className="flex-1 py-3 rounded-xl border border-outline-variant/20 font-bold text-sm text-on-surface hover:bg-surface-container transition-colors">Cancel</button>
               <button onClick={doDelete} className="flex-1 py-3 rounded-xl bg-error text-white font-bold text-sm hover:opacity-90 active:scale-95 transition-all">Delete</button>

@@ -68,9 +68,9 @@ export default function LiveClassesPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <span className="text-on-primary-container font-bold text-sm tracking-widest uppercase mb-2 block">BridgeCourse Nepal</span>
+          <span className="text-on-primary-container font-bold text-sm tracking-widest uppercase mb-2 block">Brighter Nepal</span>
           <h1 className="font-headline text-4xl md:text-5xl font-extrabold text-[#1a1a4e] leading-tight">Live Classes</h1>
-          <p className="text-slate-500 mt-2 max-w-xl">Join expert-led IOE/IOM/CSIT sessions in real time.</p>
+          <p className="text-slate-500 mt-2 max-w-xl">Join expert-led SEE preparation sessions in real time.</p>
         </div>
         {liveCount > 0 && (
           <div className="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-outline-variant/10">

@@ -67,7 +67,7 @@ export default function ResourcesPage() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <div className="mb-8">
         <h2 className="font-headline font-black text-4xl text-[#1a1a4e] tracking-tight mb-2">Study Materials</h2>
-        <p className="text-on-surface-variant font-medium">BridgeCourse Nepal — curated PDFs, videos, and notes.</p>
+        <p className="text-on-surface-variant font-medium">Brighter Nepal — curated PDFs, videos, and notes.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-[0_8px_20px_rgba(25,28,30,0.04)] p-5 mb-8 space-y-4">

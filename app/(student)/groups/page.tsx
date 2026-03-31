@@ -68,7 +68,7 @@ export default function GroupsPage() {
         <BadgeCheck className="w-8 h-8 text-outline" />
       </div>
       <h2 className="font-headline font-bold text-xl text-[#1a1a4e]">No Group Assigned</h2>
-      <p className="text-slate-500 text-sm text-center max-w-xs">You haven&apos;t been assigned to a BridgeCourse batch group yet. Contact admin.</p>
+      <p className="text-slate-500 text-sm text-center max-w-xs">You haven&apos;t been assigned to a Brighter Nepal batch group yet. Contact admin.</p>
     </div>
   )
 
@@ -110,7 +110,12 @@ export default function GroupsPage() {
         <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-[#f8f9fb]">
           {messages.length === 0 ? (
             <div className="text-center py-16 text-slate-400 font-medium">No messages yet. Be the first to post!</div>
-          ) : messages.map((msg, idx) => {
+          ) : messages.filter((msg) => {
+            // Students only see their own messages; admins see all
+            const isAdmin = user?.role === 'admin' || user?.role === 'super-admin' || user?.role === 'super_admin'
+            if (isAdmin) return true
+            return msg.user_id === user?.id
+          }).map((msg, idx) => {
             const isMe = msg.user_id === user?.id
             return (
               <div key={msg.id}>
@@ -127,7 +132,7 @@ export default function GroupsPage() {
                       <span className="text-[10px] font-bold text-white">{(msg.sender_name ?? 'BC').split(' ').map(n=>n[0]).join('').slice(0,2)}</span>
                     </div>
                     <span className="text-xs font-bold text-slate-500">
-                      {isMe ? 'You' : msg.sender_name ?? 'BridgeCourse'} • {new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                      {isMe ? 'You' : msg.sender_name ?? 'Brighter Nepal'} • {new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                     </span>
                   </div>
                   <div className={cn("p-4 rounded-2xl shadow-sm max-w-xl",

@@ -211,7 +211,7 @@ export default function WeeklyTestsPage() {
           </div>
           <div>
             <h4 className="text-xl font-headline font-bold text-on-surface">Technical issues during a test?</h4>
-            <p className="text-sm text-outline font-medium">BridgeCourse support team is available during all live exams.</p>
+            <p className="text-sm text-outline font-medium">Brighter Nepal support team is available during all live exams.</p>
           </div>
         </div>
         <button className="bg-on-secondary-fixed text-white px-10 py-3 rounded-xl font-bold hover:bg-secondary transition-all flex-shrink-0">

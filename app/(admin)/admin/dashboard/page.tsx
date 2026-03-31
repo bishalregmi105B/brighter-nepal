@@ -1,5 +1,5 @@
 'use client'
-// Admin Dashboard — updated stats from API, BridgeCourse Nepal branding
+// Admin Dashboard — updated stats from API, Brighter Nepal branding
 import { useEffect, useState } from 'react'
 import { TrendingUp, Users, CreditCard, BookOpen, Plus, Video, Loader2, UserCheck, Clock } from 'lucide-react'
 import Link from 'next/link'
@@ -36,7 +36,7 @@ export default function AdminDashboardPage() {
   const fmtNpr = (n: number) => `NPR ${n.toLocaleString()}`
 
   const topCards = [
-    { label: 'Total Students', value: stats ? fmt(stats.total_users)        : '…', icon: Users,     change: 'BridgeCourse', color: 'text-teal-600 bg-teal-50' },
+    { label: 'Total Students', value: stats ? fmt(stats.total_users)        : '…', icon: Users,     change: 'Brighter Nepal', color: 'text-teal-600 bg-teal-50' },
     { label: 'Paid Students',  value: stats ? fmt(stats.paid_users)         : '…', icon: UserCheck,  change: 'Paid Tier',    color: 'text-on-primary-container bg-orange-50' },
     { label: 'Trial Students', value: stats ? fmt(stats.trial_users)        : '…', icon: Clock,      change: 'Trial Period',  color: 'text-secondary bg-secondary/5' },
     { label: 'Total Revenue',  value: stats ? fmtNpr(stats.total_payment)   : '…', icon: CreditCard, change: 'Collected',    color: 'text-[#2d6a6a] bg-teal-50' },
@@ -52,7 +52,7 @@ export default function AdminDashboardPage() {
       <div className="mb-6 md:mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h2 className="font-headline font-black text-2xl md:text-4xl text-[#1a1a4e] tracking-tight mb-1">Admin Dashboard</h2>
-          <p className="text-on-surface-variant font-medium text-sm">BridgeCourse Nepal — academic ecosystem overview.</p>
+          <p className="text-on-surface-variant font-medium text-sm">Brighter Nepal — SEE Questions preparation ecosystem overview.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {quickActions.map((action) => {
@@ -142,9 +142,8 @@ export default function AdminDashboardPage() {
           </div>
           <div className="space-y-3">
             {[
-              { label: 'IOE Batch 2081', pct: 45, color: 'bg-on-primary-container' },
-              { label: 'IOM/MBBS Batch', pct: 35, color: 'bg-[#1a1a4e]' },
-              { label: 'CSIT/BIT Batch', pct: 20, color: 'bg-on-tertiary-container' },
+              { label: 'SEE Batch 2081', pct: 60, color: 'bg-on-primary-container' },
+              { label: 'SEE Batch 2082', pct: 40, color: 'bg-[#1a1a4e]' },
             ].map((s) => (
               <div key={s.label} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

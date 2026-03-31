@@ -1,7 +1,19 @@
 'use client'
-// Signup Page — wired to real Flask API via authService
-import Link from 'next/link'
+// Signup Page — DISABLED: Signup is currently disabled. Redirect to login.
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+
+export default function SignupPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/login')
+  }, [router])
+  return null
+}
+
+/*
+// Original Signup Page — commented out
+import Link from 'next/link'
 import { useState } from 'react'
 import { School, User, Mail, Phone, Lock, ArrowRight, AlertCircle } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -196,3 +208,4 @@ export default function SignupPage() {
     </>
   )
 }
+*/

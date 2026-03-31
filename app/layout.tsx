@@ -16,12 +16,12 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title:       'Brighter Nepal — Academic Curator',
-  description: "Nepal's premier digital learning platform. Access world-class resources curated for exam success.",
-  keywords:    ['IOE Entrance', 'Nepal exam preparation', 'model sets', 'academic resources', 'Brighter Nepal'],
+  description: "Nepal's premier digital learning platform for SEE Question Preparation.",
+  keywords:    ['SEE preparation', 'Nepal exam preparation', 'model sets', 'academic resources', 'Brighter Nepal'],
   authors:     [{ name: 'Brighter Nepal' }],
   openGraph: {
     title:       'Brighter Nepal — Academic Curator',
-    description: "Nepal's premier digital learning platform for entrance exam preparation.",
+    description: "Nepal's premier digital learning platform for SEE Question Preparation.",
     type:        'website',
   },
 }

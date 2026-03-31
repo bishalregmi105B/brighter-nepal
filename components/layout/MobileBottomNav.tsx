@@ -3,12 +3,12 @@
 // Shows 5 key links for both student and admin roles
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, BookOpen, Video, ClipboardList, User, Users, CreditCard, Megaphone } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Video, ClipboardList, User, Users, CreditCard, Megaphone, PlayCircle } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 const STUDENT_ITEMS = [
   { href: '/dashboard',        label: 'Home',     Icon: LayoutDashboard },
-  { href: '/model-sets',       label: 'Sets',     Icon: BookOpen },
+  { href: '/recorded-lectures', label: 'Lectures',  Icon: PlayCircle },
   { href: '/live-classes',     label: 'Live',     Icon: Video },
   { href: '/weekly-tests',     label: 'Tests',    Icon: ClipboardList },
   { href: '/profile',          label: 'Profile',  Icon: User },

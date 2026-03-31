@@ -16,7 +16,7 @@ export const subjects: Subject[] = [
 ]
 
 export const targetExams = [
-  'Bridge Course',
+  'SEE Preparation',
 ]
 
 export const streams = [

@@ -33,7 +33,7 @@ export default function NoticesPage() {
       <div className="flex items-center justify-between mb-10">
         <div>
           <h2 className="font-headline font-black text-4xl text-[#1a1a4e] tracking-tight mb-2">Notices</h2>
-          <p className="text-on-surface-variant font-medium">Stay updated with BridgeCourse Nepal announcements and alerts.</p>
+          <p className="text-on-surface-variant font-medium">Stay updated with Brighter Nepal announcements and alerts.</p>
         </div>
         <div className="w-12 h-12 rounded-2xl bg-on-primary-container/10 flex items-center justify-center">
           <Bell className="w-6 h-6 text-on-primary-container" />

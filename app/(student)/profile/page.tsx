@@ -57,7 +57,7 @@ export default function ProfilePage() {
               {user?.plan === 'paid' ? 'Premium Plan' : 'Free Trial'}
             </span>
             <span className="bg-surface-container text-slate-600 text-xs font-bold px-3 py-1 rounded-full">
-              BridgeCourse Nepal
+              Brighter Nepal
             </span>
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function ProfilePage() {
             { label: 'Live Class Reminders',       sub: 'Get notified 15 minutes before a class starts', defaultOn: true  },
             { label: 'Weekly Test Announcements',  sub: 'Alerts when a new test is scheduled or opened', defaultOn: true  },
             { label: 'Result Releases',            sub: 'Know when your test results are published',      defaultOn: true  },
-            { label: 'Group Announcements',        sub: 'Admin messages from your BridgeCourse batch',    defaultOn: false },
+            { label: 'Group Announcements',        sub: 'Admin messages from your Brighter Nepal batch',    defaultOn: false },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between p-4 bg-surface-container-low rounded-xl">
               <div>
@@ -149,7 +149,7 @@ export default function ProfilePage() {
           <div>
             <p className="font-black text-lg">{user?.plan === 'paid' ? 'Premium Plan Active' : 'Upgrade to Premium'}</p>
             <p className="text-white/60 text-sm">
-              {user?.plan === 'paid' ? 'Full access to all IOE/IOM/CSIT mock sets, live classes & resources' : 'Unlock all BridgeCourse Nepal content'}
+              {user?.plan === 'paid' ? 'Full access to all SEE mock sets, live classes & resources' : 'Unlock all Brighter Nepal content'}
             </p>
           </div>
         </div>

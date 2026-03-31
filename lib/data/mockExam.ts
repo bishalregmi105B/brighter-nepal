@@ -1,9 +1,9 @@
-// Mock Data: mockExam — realistic IOE mock exam data matching Stitch HTML
+// Mock Data: mockExam — realistic SEE mock exam data matching Stitch HTML
 import type { Exam } from '@/lib/types/exam'
 
 export const mockExam: Exam = {
-  id:         'exam-ioe-model-04',
-  title:      'IOE Mock Entrance — Set #04',
+  id:         'exam-see-model-04',
+  title:      'SEE Mock — Set #04',
   type:       'model-set',
   subjects:   ['Physics', 'Chemistry', 'Mathematics', 'English'],
   duration:   3 * 60 * 60,
@@ -20,7 +20,7 @@ export const mockExam: Exam = {
         ? 'A projectile is fired at an angle of 45° with the horizontal. If the air resistance is negligible, the horizontal range is maximum. What happens to the range if the firing angle is increased to 60°?'
         : i === 1
         ? 'Which of the following elements has the highest electronegativity according to the Pauling scale?'
-        : `Question ${i + 1}: ${subject} problem regarding exam preparation for IOE entrance examination Nepal.`,
+        : `Question ${i + 1}: ${subject} problem regarding SEE preparation Nepal.`,
       options: [
         { id: 'A', label: 'A', text: i === 0 ? 'The range increases' : i === 1 ? 'Fluorine' : 'Option A — most likely correct based on formula derivation' },
         { id: 'B', label: 'B', text: i === 0 ? 'The range decreases' : i === 1 ? 'Chlorine' : 'Option B — requires further evaluation' },

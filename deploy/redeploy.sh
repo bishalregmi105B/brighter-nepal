@@ -34,6 +34,8 @@ redeploy_frontend() {
     echo "→ Redeploying Frontend..."
     cd "$APP_DIR/brighter-nepal"
     git pull --ff-only
+    # Symlink NEXT_PUBLIC vars into project root so they're baked in at build time
+    grep "^NEXT_PUBLIC_" "$APP_DIR/.env" > .env.production.local
     npm install
     npm run build
     # Copy static assets into standalone output
@@ -42,6 +44,7 @@ redeploy_frontend() {
         cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
         cp -r public .next/standalone/public 2>/dev/null || true
     fi
+    chmod -R o+rX public
     systemctl restart bn-frontend
     echo "  ✓ Frontend restarted"
 }

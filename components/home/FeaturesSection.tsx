@@ -7,7 +7,7 @@ const features = [
     icon:    BookOpen,
     color:   'bg-on-primary-container/10 text-on-primary-container',
     title:   '2,500+ Study Resources',
-    desc:    'Hand-picked PDFs, video lectures, and notes curated by Nepal\'s top educators across all entrance exams.',
+    desc:    'Hand-picked PDFs, video lectures, and notes curated by Nepal\'s top educators for SEE Question Preparation.',
   },
   {
     icon:    Video,
@@ -19,7 +19,7 @@ const features = [
     icon:    FileText,
     color:   'bg-[#1a1a4e]/10 text-[#1a1a4e]',
     title:   'Comprehensive Model Sets',
-    desc:    '100-question IOE, CEE, IOM model sets with auto-scoring, detailed explanations, and performance analytics.',
+    desc:    '100-question SEE model sets with auto-scoring, detailed explanations, and performance analytics.',
   },
   {
     icon:    Users,
@@ -54,7 +54,7 @@ export function FeaturesSection() {
             Everything You Need to Succeed
           </h2>
           <p className="text-on-surface-variant text-lg max-w-2xl mx-auto leading-relaxed">
-            A complete academic ecosystem built specifically for Nepal&apos;s entrance exam landscape.
+            A complete academic ecosystem built specifically for SEE Question Preparation.
           </p>
         </div>
 

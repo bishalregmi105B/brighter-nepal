@@ -374,7 +374,7 @@ function ResourceModal({
               <input
                 value={form.tags}
                 onChange={e => set('tags', e.target.value)}
-                placeholder="e.g. calculus, derivatives, IOE"
+                placeholder="e.g. calculus, derivatives, SEE"
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c0622f]/20"
               />
             </div>

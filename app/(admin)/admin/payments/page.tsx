@@ -158,7 +158,7 @@ export default function AdminPaymentsPage() {
       </section>
 
       <footer className="flex flex-col md:flex-row justify-between items-center py-6 border-t border-surface-container text-slate-400 text-xs">
-        <p>© 2081 BridgeCourse Nepal. All financial data is encrypted and PCI-DSS compliant.</p>
+        <p>© 2081 Brighter Nepal. All financial data is encrypted and PCI-DSS compliant.</p>
       </footer>
     </div>
   )

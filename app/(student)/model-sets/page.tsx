@@ -83,7 +83,7 @@ export default function ModelSetsPage() {
       <section className="mb-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <span className="text-on-primary-container font-bold text-sm tracking-widest uppercase mb-2 block">BridgeCourse Nepal</span>
+            <span className="text-on-primary-container font-bold text-sm tracking-widest uppercase mb-2 block">Brighter Nepal</span>
             <h3 className="font-headline text-4xl md:text-5xl font-extrabold text-[#1a1a4e] leading-tight">
               Mock Tests <br />& Model Sets
             </h3>
@@ -150,7 +150,7 @@ export default function ModelSetsPage() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <p className={cn('font-headline text-2xl font-black', isFeatured ? 'text-white' : 'text-[#1a1a4e]')}>
-                      {set.title.replace(/^(IOE|IOM|CEE|CSIT|Pulchowk|Thapathali|BridgeCourse|St\. Xavier's|SOS)\s*/i, '').slice(0, 22)}
+                      {set.title.replace(/^(SEE|Brighter\s*Nepal)\s*/i, '').slice(0, 22)}
                     </p>
                   </div>
                   <p className={cn('text-xs font-medium', isFeatured ? 'text-slate-300' : 'text-slate-500')}>

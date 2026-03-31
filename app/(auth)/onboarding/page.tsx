@@ -12,7 +12,7 @@ const steps = [
   { number: 3, label: 'Finish' },
 ]
 
-const examOptions = ['Bridge Course']
+const examOptions = ['SEE Preparation']
 const streamOptions = ['Science', 'Management', 'Humanities', 'Education', 'Law']
 const sourceOptions = ['Social Media', 'Friend / Recommendation', 'Search Engine', 'Campus Ambassador', 'Advertisement']
 
@@ -23,7 +23,7 @@ export default function OnboardingPage() {
   const [location, setLocation] = useState('')
   const [stream, setStream] = useState(streamOptions[0])
   const [heardFrom, setHeardFrom] = useState(sourceOptions[0])
-  const [selectedExams, setSelectedExams] = useState<string[]>(['Bridge Course'])
+  const [selectedExams, setSelectedExams] = useState<string[]>(['SEE Preparation'])
   const [finishing, setFinishing] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -190,7 +190,7 @@ export default function OnboardingPage() {
 
                 <div className="flex flex-col gap-4">
                   <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant ml-1">
-                    Target Entrance Exams (Select all that apply)
+                    Target Exams (Select all that apply)
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {examOptions.map((exam) => {

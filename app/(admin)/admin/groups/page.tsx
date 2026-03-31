@@ -31,7 +31,7 @@ export default function AdminGroupsPage() {
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Study Groups</h2>
-          <p className="text-slate-500 font-medium">BridgeCourse Nepal — manage batch groups and broadcast channels.</p>
+          <p className="text-slate-500 font-medium">Brighter Nepal — manage batch groups and broadcast channels.</p>
         </div>
         <button onClick={() => setShowModal(true)} className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
           <Plus className="w-5 h-5" /> Create Group
@@ -129,7 +129,7 @@ function CreateGroupModal({ onClose, onSaved }: { onClose: () => void, onSaved: 
           {error && <div className="p-3 bg-error-container text-error rounded-xl text-sm font-bold">{error}</div>}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Group Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="E.g., +2 Science Bridge Course"
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="E.g., SEE Preparation Group"
               className="w-full px-4 py-3 bg-surface-container-low rounded-xl border-none focus:ring-2 focus:ring-on-primary-container text-sm font-bold placeholder:font-medium placeholder:text-outline" />
           </div>
           <div className="space-y-1.5">

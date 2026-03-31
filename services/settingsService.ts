@@ -24,4 +24,9 @@ export const settingsService = {
     api.get<{ data: ChatSettings }>('/api/settings/chat'),
   updateChatSettings: (payload: Partial<ChatSettings>) =>
     api.patch<{ data: ChatSettings }>('/api/settings/chat', payload),
+
+  getSubjects: () =>
+    api.get<{ data: string[] }>('/api/settings/subjects'),
+  updateSubjects: (subjects: string[]) =>
+    api.put<{ data: string[] }>('/api/settings/subjects', subjects),
 }

@@ -62,7 +62,7 @@ function LoginForm() {
         <div className="relative z-10 max-w-md">
           <h2 className="font-headline text-5xl font-extrabold leading-[1.1] mb-6">Welcome back, Scholar.</h2>
           <p className="text-secondary-fixed text-lg leading-relaxed opacity-90">
-            Nepal&apos;s most trusted IOE · IOM · CSIT entrance preparation platform. Continue where you left off.
+            Nepal&apos;s most trusted SEE Questions preparation platform. Continue where you left off.
           </p>
         </div>
         <div className="relative z-10 flex items-center gap-4 mt-auto">
@@ -97,12 +97,7 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Demo credentials hint — updated to match current seed */}
-          <div className="mb-5 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
-            <p className="text-xs font-bold text-slate-500 mb-1.5">Demo Credentials</p>
-            <p className="text-xs text-slate-600"><span className="font-bold">Admin:</span> admin@brighternepal.edu.np / BrighterAdmin@2081</p>
-            <p className="text-xs text-slate-600"><span className="font-bold">Student:</span> aashish.maharjan@gmail.com / Student@2081</p>
-          </div>
+
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Error banner (login failures only) */}
@@ -160,12 +155,14 @@ function LoginForm() {
             </button>
           </form>
 
+          {/* Signup disabled
           <footer className="mt-8 text-center">
             <p className="text-on-surface-variant font-medium">
               Don&apos;t have an account?{' '}
               <Link href="/signup" className="text-[#1a1a4e] font-extrabold hover:text-on-primary-container transition-colors ml-1">Sign Up</Link>
             </p>
           </footer>
+          */}
         </div>
       </section>
     </>

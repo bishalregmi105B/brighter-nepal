@@ -31,7 +31,7 @@ export default function AdminWeeklyTestsPage() {
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-4xl font-extrabold text-[#1a1a4e] tracking-tight font-headline mb-1">Weekly Tests</h2>
-          <p className="text-slate-500 font-medium">BridgeCourse Nepal — schedule, monitor, and evaluate IOE/IOM/CSIT tests.</p>
+          <p className="text-slate-500 font-medium">Brighter Nepal — schedule, monitor, and evaluate SEE preparation tests.</p>
         </div>
         <Link href="/admin/weekly-tests/create" className="bg-[#c0622f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#c0622f]/20">
           <Plus className="w-5 h-5" /> Create Test
