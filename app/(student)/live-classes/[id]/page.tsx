@@ -148,7 +148,7 @@ export default function LiveClassRoomPage() {
       </div>
 
       {/* Video player — full width, pinned below top bar */}
-      <div className="flex-shrink-0 bg-black">
+      <div className="flex-shrink-0 bg-black max-h-[45vh]">
         <SecureVideoPlayer
           videoUrl={cls?.stream_url ?? ''}
           title={cls?.title}
