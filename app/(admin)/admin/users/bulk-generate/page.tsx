@@ -12,21 +12,22 @@ interface CreatedUser { id: number; bc_id: string; name: string; email: string; 
 
 export default function BulkGeneratePage() {
   const [rows, setRows] = useState<BulkRow[]>([
-    { id: 'r1', name: '', email: '', plan: 'trial' },
+    { id: 'r1', name: '', email: '', plan: 'paid' },
   ])
   const [loading,      setLoading]      = useState(false)
   const [createdUsers, setCreatedUsers] = useState<CreatedUser[]>([])
   const [errorMsg,     setErrorMsg]     = useState('')
   const [showPw,       setShowPw]       = useState(false)
+  const [copiedUserId, setCopiedUserId] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const addRow = () =>
-    setRows((prev) => [...prev, { id: `r${Date.now()}`, name: '', email: '', plan: 'trial' }])
+    setRows((prev) => [...prev, { id: `r${Date.now()}`, name: '', email: '', plan: 'paid' }])
 
   const removeRow = (id: string) =>
     setRows((prev) => prev.filter((r) => r.id !== id))
 
-  const updateRow = (id: string, field: keyof BulkRow, value: string) =>
+  const updateRow = <K extends keyof BulkRow>(id: string, field: K, value: BulkRow[K]) =>
     setRows((prev) => prev.map((r) => r.id === id ? { ...r, [field]: value } : r))
 
   const validRows = rows.filter((r) => r.name.trim())
@@ -48,7 +49,7 @@ export default function BulkGeneratePage() {
       const users: CreatedUser[] = data?.users ?? []
       setCreatedUsers(users)
       // Reset rows
-      setRows([{ id: 'r1', name: '', email: '', plan: 'trial' }])
+      setRows([{ id: 'r1', name: '', email: '', plan: 'paid' }])
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Failed to create accounts')
     } finally {
@@ -56,11 +57,28 @@ export default function BulkGeneratePage() {
     }
   }
 
-  const copyAll = () => {
-    const text = createdUsers.map(u =>
-      `${u.bc_id} | ${u.name} | ${u.email} | Password: ${u.password}`
-    ).join('\n')
-    navigator.clipboard.writeText(text)
+  const buildLoginMessage = (u: CreatedUser) =>
+    `Your user id is ${u.bc_id} and password is ${u.password} , Please go to https://brighternepal.com/login to login`
+
+  const copySingle = async (u: CreatedUser) => {
+    try {
+      await navigator.clipboard.writeText(buildLoginMessage(u))
+      setCopiedUserId(u.id)
+      window.setTimeout(() => {
+        setCopiedUserId((current) => (current === u.id ? null : current))
+      }, 1500)
+    } catch {
+      setErrorMsg('Unable to copy credentials. Please copy manually.')
+    }
+  }
+
+  const copyAll = async () => {
+    try {
+      const text = createdUsers.map(buildLoginMessage).join('\n')
+      await navigator.clipboard.writeText(text)
+    } catch {
+      setErrorMsg('Unable to copy credentials. Please copy manually.')
+    }
   }
 
   return (
@@ -135,11 +153,11 @@ export default function BulkGeneratePage() {
                   <td className="px-5 py-3">
                     <select
                       value={row.plan}
-                      onChange={(e) => updateRow(row.id, 'plan', e.target.value)}
+                      onChange={(e) => updateRow(row.id, 'plan', e.target.value as BulkRow['plan'])}
                       className="px-3 py-2 bg-surface-container rounded-lg border-none focus:ring-2 focus:ring-on-primary-container/20 text-sm font-medium"
                     >
-                      <option value="trial">7-Day Trial</option>
                       <option value="paid">Premium Plus</option>
+                      <option value="trial">7-Day Trial</option>
                     </select>
                   </td>
                   <td className="px-5 py-3">
@@ -194,7 +212,7 @@ export default function BulkGeneratePage() {
             <table className="w-full text-left">
               <thead className="bg-surface-container-low/50">
                 <tr>
-                  {['Student ID', 'Name', 'Email', 'Plan', 'Password'].map(col => (
+                  {['Student ID', 'Name', 'Email', 'Plan', 'Password', 'Actions'].map(col => (
                     <th key={col} className="px-5 py-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">{col}</th>
                   ))}
                 </tr>
@@ -214,6 +232,15 @@ export default function BulkGeneratePage() {
                     </td>
                     <td className="px-5 py-3 font-mono text-sm">
                       {showPw ? u.password : '••••••••••'}
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => copySingle(u)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        {copiedUserId === u.id ? 'Copied' : 'Copy'}
+                      </button>
                     </td>
                   </tr>
                 ))}

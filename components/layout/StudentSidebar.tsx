@@ -56,7 +56,9 @@ export function StudentSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1 px-2">
-        {studentNavItems.map((item) => {
+        {studentNavItems
+          .filter((item) => item.href !== '/groups')
+          .map((item) => {
           const Icon    = item.icon
           const isActive = pathname.startsWith(item.href)
           return (
