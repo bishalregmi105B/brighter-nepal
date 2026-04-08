@@ -1,7 +1,7 @@
 'use client'
 // Admin User Management — full admin view with inline editing, WhatsApp, joined_method, auto-password visibility
 import { useEffect, useState, useCallback } from 'react'
-import { Download, UserPlus, ChevronLeft, ChevronRight, Search, X, Loader2, Phone, ShieldCheck, Pencil, Check, MessageSquare, Eye } from 'lucide-react'
+import { Download, UserPlus, ChevronLeft, ChevronRight, Search, X, Loader2, Phone, ShieldCheck, Pencil, Check, MessageSquare, Eye, Copy } from 'lucide-react'
 import Link from 'next/link'
 import { userService, type User, type ContactMethod } from '@/services/userService'
 import { groupService, type Group } from '@/services/groupService'
@@ -251,6 +251,7 @@ export default function UserManagementPage() {
   const [shifting, setShifting] = useState<User | null>(null)
   const [viewingOnboarding, setViewingOnboarding] = useState<User | null>(null)
   const [editing,  setEditing]  = useState<number | null>(null)
+  const [copiedUserId, setCopiedUserId] = useState<number | null>(null)
   const [contactMethods, setContactMethods] = useState<ContactMethod[]>([])
   const [groups, setGroups] = useState<Group[]>([])
 
@@ -301,6 +302,24 @@ export default function UserManagementPage() {
       window.alert(message)
     } finally {
       setExporting(false)
+    }
+  }
+
+  const buildLoginMessage = (u: User) => {
+    const userId = `BC${u.student_id ?? String(u.id).padStart(6, '0')}`
+    const password = u.plain_password?.trim() || 'not available'
+    return `Your user id is ${userId} and password is ${password} , Please go to https://brighternepal.com/login to login`
+  }
+
+  const copyLoginMessage = async (u: User) => {
+    try {
+      await navigator.clipboard.writeText(buildLoginMessage(u))
+      setCopiedUserId(u.id)
+      window.setTimeout(() => {
+        setCopiedUserId((current) => (current === u.id ? null : current))
+      }, 1500)
+    } catch {
+      window.alert('Unable to copy login details. Please copy manually.')
     }
   }
 
@@ -480,6 +499,12 @@ export default function UserManagementPage() {
                           className="flex items-center gap-1 px-2.5 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50"
                         >
                           <Eye className="w-3 h-3" /> Onboarding
+                        </button>
+                        <button
+                          onClick={() => copyLoginMessage(u)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50"
+                        >
+                          <Copy className="w-3 h-3" /> {copiedUserId === u.id ? 'Copied' : 'Copy Login'}
                         </button>
                         {u.plan === 'trial' && (
                           <button onClick={() => setShifting(u)}
